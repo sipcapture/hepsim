@@ -1,0 +1,29 @@
+{
+  "name": "expsuehep",
+  "version": "0.1.0",
+  "description": "simulate phone calls with hep",
+  "main": "index.js",
+  "type": "module",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Dletta/expsuehep.git"
+  },
+  "keywords": [
+    "hep",
+    "simulate",
+    "statistics",
+    "demo"
+  ],
+  "author": "Jachen Duschletta (QXIP)",
+  "license": "AGPL-3.0-or-later",
+  "bugs": {
+    "url": "https://github.com/Dletta/expsuehep/issues"
+  },
+  "homepage": "https://github.com/Dletta/expsuehep#readme",
+  "dependencies": {
+    "hep-js": "^1.0.20"
+  }
+}

@@ -1,0 +1,52 @@
+{
+    "scenarios": [
+        {
+            "name": "normal",
+            "call": {
+                "from": "phoneEndpoint1",
+                "via": "sbc1",
+                "to": "phoneEndpoint2",
+                "duration": [65, 123],
+                "amount": 100,
+                "mos": [3.2, 4.3],
+                "jitter": [0, 250],
+                "packetLoss": [0, 1]
+            }
+        },
+        {
+            "name": "bad",
+            "call": {
+                "from": "phoneEndpoint1",
+                "via": "sbc2",
+                "to": "phoneEndpoint2",
+                "duration": [35, 123],
+                "amount": 10,
+                "mos": [1.2, 2.3],
+                "jitter": [150, 300],
+                "packetLoss": [10, 120]
+            }
+        }
+    ],
+    "virtualInfrastructure": {
+        "phoneEndpoint1": {
+            "type": "phone",
+            "ip": "127.0.0.25",
+            "linkedTo": ["sbc1", "sbc2"]
+        },
+        "sbc1": {
+            "type": "sbc",
+            "ip": "127.0.0.33",
+            "linkedTo": ["phoneEndpoint1", "phoneEndpoint2"]
+        },
+        "sbc2": {
+            "type": "sbc",
+            "ip": "127.0.0.65",
+            "linkedTo": ["phoneEndpoint1", "phoneEndpoint2"]
+        },
+        "phoneEndpoint2": {
+            "type": "phone",
+            "ip": "127.0.0.23",
+            "linkedTo": ["sbc1", "sbc2"]
+        }
+    }
+}
