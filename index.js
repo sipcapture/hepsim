@@ -16,9 +16,11 @@ import * as dgram from 'node:dgram'
 const debug = false
 
 process.on('SIGINT', function() {
-    console.log("Caught interrupt signal")
+    if (simulationModule.killed) {
+        process.exit()
+    }
+    console.log("Stopping Simulation")
     simulationModule.killSimulation()
-    process.exit()
 })
 
 /*
@@ -59,19 +61,43 @@ senderModule.receiver = process.env.HEP_ADDRESS || '127.0.0.1'
 senderModule.port = process.env.PORT || 9060
 senderModule.socket = null
 
-/* TODO: check if socket is open, otherwise buffer */
-senderModule.send = function (hepPacket) {
+senderModule.establishConnection = async function () {
+    senderModule.socket = dgram.createSocket('udp4')
+    senderModule.socket.connect(senderModule.port, senderModule.receiver)
+    senderModule.socket.on('error', (err) => {
+        console.log('Error sending HEP Packet')
+        console.log(err)
+    })
+
+    senderModule.socket.on('close', () => {
+        console.log('Connection to HEP Server closed')
+        senderModule.socket = null
+    })
+
+    return new Promise((resolve, reject) => {
+        senderModule.socket.on('connect', () => {
+            console.log('Connected to HEP Server')
+            resolve()
+        })
+    })
+}
+
+senderModule.send = async function (hepPacket) {
     if (debug) console.log('Sending HEP Packet')
     if (debug) console.log(hepPacket)
     if (!senderModule.socket) {
-        senderModule.socket = dgram.createSocket('udp4')
+        await senderModule.establishConnection()
     }
 
-    senderModule.socket.send(hepPacket, senderModule.port, senderModule.receiver, (err) => {
-        if (err) {
-            console.log('Error sending HEP Packet')
-            console.log(err)
-        }
+    return new Promise((resolve, reject) => {
+        senderModule.socket.send(hepPacket, (err) => {
+            if (err) {
+                console.log('Error sending HEP Packet')
+                console.log(err)
+                reject(err)
+            }
+            resolve()
+        })
     })
 }
 
@@ -226,7 +252,7 @@ hepModule.generate200OKInvite = function (seq, from, to, callid, rcinfo) {
 }
 
 /**
- * Generate a Short RTP report
+ * Generate a Periodic RTP report
  * @param {string} from 
  * @param {string} to 
  * @param {string} callid 
@@ -264,14 +290,12 @@ hepModule.generateHangupReport = function (callid, rcinfo, mediaInfo) {
     rcinfoRaw.proto_type = 34
     rcinfoRaw.correlation_id = callid
     rcinfoRaw.mos = parseInt(403)
-    rcinfoRaw.cval1 = parseInt(403)
-    rcinfoRaw.cval2 = parseInt(802)
     let datenow = new Date().getTime()
     rcinfoRaw.time_sec = Math.floor(datenow / 1000)
     rcinfoRaw.time_usec = (datenow - (rcinfoRaw.time_sec*1000))*1000
     /* TODO: Add RTP Start and Stop to mediaInfo */
     /* TODO: Calculate MOS, RFACTOR, Jitter, Packetloss in mediaInfo */
-    let rawHangupReport = '{"CORRELATION_ID":"' + callid + '","RTP_SIP_CALL_ID":"' + callid + '","DELTA":19.983,"JITTER":0.017,"REPORT_TS":' + new Date().getTime()/1000 + ',"TL_BYTE":0,"SKEW":0.000,"TOTAL_PK":1512,"EXPECTED_PK":1512,"PACKET_LOSS":0,"SEQ":0,"MAX_JITTER":0.010,"MAX_DELTA":20.024,"MAX_SKEW":0.172,"MEAN_JITTER":0.005,"MIN_MOS":4.032, "MEAN_MOS":4.032, "MOS":4.032,"RFACTOR":80.200,"MIN_RFACTOR":80.200,"MEAN_RFACTOR":80.200,"SRC_IP":"' + rcinfoRaw.srcIp + '", "SRC_PORT":26872, "DST_IP":"' +  rcinfoRaw.dstIp + '","DST_PORT":51354,"SRC_MAC":"00-30-48-7E-5D-C6","DST_MAC":"00-12-80-D7-38-5E","OUT_ORDER":0,"SSRC_CHG":0,"CODEC_CH":0, "CODEC_PT":9, "CLOCK":8000,"CODEC_NAME":"g722","DIR":0,"REPORT_NAME":"' + rcinfoRaw.srcIp + ':26872","PARTY":0,"IP_QOS":,"INFO_VLAN":0,"VIDEO":0,"REPORT_START":' + (new Date().getTime()/1000)-30 + ',"REPORT_END":' + new Date().getTime()/1000 + ',"SSRC":"%#08X","RTP_START":' + (new Date().getTime()/1000)-30 + ',"RTP_STOP":' + new Date().getTime()/1000 + ',"ONE_WAY_RTP":0,"EVENT":0,"STYPE":"RTP","TYPE":"HANGUP"}'
+    let rawHangupReport = `{"CORRELATION_ID":"${callid}","RTP_SIP_CALL_ID":"${callid}","DELTA":25.009,"JITTER":6.699,"REPORT_TS":${new Date().getTime() / 1000},"TL_BYTE":223320,"SKEW":5.941,"TOTAL_PK":997,"EXPECTED_PK":996,"PACKET_LOSS":0,"SEQ":0,"MAX_JITTER":10.378,"MAX_DELTA":53.889,"MAX_SKEW":26.510,"MEAN_JITTER":6.639,"MIN_MOS":4.030, "MEAN_MOS":4.030, "MOS":4.030,"RFACTOR":93.200,"MIN_RFACTOR":93.200,"MEAN_RFACTOR":93.200,"SRC_IP":"${rcinfoRaw.srcIp}", "SRC_PORT":${rcinfoRaw.srcPort}, "DST_IP":"${rcinfoRaw.dstIp}","DST_PORT":${rcinfoRaw.dstPort},"SRC_MAC":"08-00-27-57-CD-E8","DST_MAC":"08-00-27-57-CD-E9","OUT_ORDER":0,"SSRC_CHG":0,"CODEC_CH":0,"CODEC_PT":9, "CLOCK":8000,"CODEC_NAME":"G722","DIR":${mediaInfo.direction},"REPORT_NAME":"${rcinfoRaw.srcIp}:${rcinfoRaw.srcPort}","PARTY":${mediaInfo.direction},"IP_QOS":184,"INFO_VLAN":0,"VIDEO":0,"REPORT_START":${(new Date().getTime() / 1000) - 30},"REPORT_END":${new Date().getTime() / 1000},"SSRC":"0X6687F6CF","RTP_START":${new Date().getTime() - 30000},"RTP_STOP":${new Date().getTime()},"ONE_WAY_RTP":0,"EVENT":0,"STYPE":"SIP:REQ","TYPE":"HANGUP"}`
 
     return hepJs.encapsulate(rawHangupReport, rcinfoRaw)
 }
@@ -296,7 +320,7 @@ hepModule.generateShortHangupReport = function (callid, rcinfo, mediaInfo) {
     rcinfoRaw.time_usec = (datenow - (rcinfoRaw.time_sec*1000))*1000
     /* TODO: Add RTP Start and Stop to mediaInfo */
     /* TODO: Calculate MOS, RFACTOR, Jitter, Packetloss in mediaInfo */
-    let rawHangupReport = '{"CORRELATION_ID":"' + callid + '","RTP_SIP_CALL_ID":"' + callid + '","DELTA":19.983,"JITTER":0.017,"REPORT_TS":' + new Date().getTime()/1000 + ',"TL_BYTE":0,"SKEW":0.000,"TOTAL_PK":1512,"EXPECTED_PK":1512,"PACKET_LOSS":0,"SEQ":0,"MAX_JITTER":0.010,"MAX_DELTA":20.024,"MAX_SKEW":0.172,"MEAN_JITTER":0.005,"MIN_MOS":4.032, "MEAN_MOS":4.032, "MOS":4.032,"RFACTOR":80.200,"MIN_RFACTOR":80.200,"MEAN_RFACTOR":80.200,"SRC_IP":"' + rcinfoRaw.srcIp + '", "SRC_PORT":26872, "DST_IP":"' +  rcinfoRaw.dstIp + '","DST_PORT":51354,"SRC_MAC":"00-30-48-7E-5D-C6","DST_MAC":"00-12-80-D7-38-5E","OUT_ORDER":0,"SSRC_CHG":0,"CODEC_CH":0, "CODEC_PT":9, "CLOCK":8000,"CODEC_NAME":"g722","DIR":0,"REPORT_NAME":"' + rcinfoRaw.srcIp + ':26872","PARTY":0,"IP_QOS":,"INFO_VLAN":0,"VIDEO":0,"REPORT_START":' + (new Date().getTime()/1000)-30 + ',"REPORT_END":' + new Date().getTime()/1000 + ',"SSRC":"%#08X","RTP_START":' + (new Date().getTime()/1000)-30 + ',"RTP_STOP":' + new Date().getTime()/1000 + ',"ONE_WAY_RTP":0,"EVENT":0,"STYPE":"RTP","TYPE":"HANGUP"}'
+    let rawHangupReport = `{"CORRELATION_ID":"${callid}","RTP_SIP_CALL_ID":"${callid}","PACKET_LOSS":0,"EXPECTED_PK":996,"CODEC_PT":9,"CODEC_NAME":"G722","CODEC_RATE":8000,"MEAN_JITTER":6.639,"MOS":4.030,"RFACTOR":93.200,"DIR":${mediaInfo.direction},"ONE_WAY_RTP":0,"REPORT_NAME":"${rcinfoRaw.srcIp}:26876","PARTY":${mediaInfo.direction},"TYPE":"HANGUP"}`
 
     return hepJs.encapsulate(rawHangupReport, rcinfoRaw)
 }
@@ -426,42 +450,6 @@ sessionModule.initializeSessions = function (config) {
 }
 
 /**
- * Create individual sessions
- * @param {SCENARIO} scenario 
- * @returns 
- */
-sessionModule.createSession = function (scenario, correlation_id) {
-    /**
-     * @type {{callid: string, seq: number, duration: number, via: string, from_user: string, from_ip: string, to_user: string, to_ip: string, target_duration: number, mos_range: number[], jitter_range: number[], packetloss_range: number[], state: string, callflow: string, mediaInfo: MEDIAINFO}}
-     */
-    let session = {
-        callid: 'sim_' + utils.generateRandomString(8),
-        seq: utils.getRandomInt(1000, 9999),
-        duration: 0,
-        via: scenario.call.via,
-        from_user: utils.getRandomPhoneNumber(),
-        from_ip: simulationModule.infrastructure[scenario.call.from].ip,
-        to_user: utils.getRandomPhoneNumber(),
-        to_ip: simulationModule.infrastructure[scenario.call.to].ip,
-        target_duration: utils.getRandomInt(scenario.call.duration[0], scenario.call.duration[1]) * 1000,
-        mos_range: scenario.call.mos,
-        jitter_range: scenario.call.jitter,
-        packetloss_range: scenario.call.packetloss,
-        state: '0',
-        callflow: scenario.callflow,
-        mediaInfo: {}
-    }
-    /* TODO: Implement random MOS, Jitter and Packetloss */
-    if (correlation_id) {
-        session.correlation_id = correlation_id
-    }
-    let captureId = simulationModule.infrastructure[scenario.call.from].captureId || simulationModule.infrastructure[scenario.call.to].captureId || 12345
-    session.outDirection = hepModule.generateRCInfo(captureId, 'hep', 1, session?.correlation_id || session.callid, 1, session.from_ip, session.to_ip, 5060, 5060)
-    session.inDirection = hepModule.generateRCInfo(captureId, 'hep', 1, session?.correlation_id || session.callid, 1, session.to_ip, session.from_ip, 5060, 5060)
-    return session
-}
-
-/**
  * Initialize a Scenario sessions
  * @param {SCENARIO} scenario 
  */
@@ -469,12 +457,15 @@ sessionModule.initializeScenario = function (scenario) {
     console.log('Initializing Scenario ', scenario)
     for (let i = 0; i < scenario.call.amount; i++) {
         if (scenario.call?.via) {
+            /* Generate from and to user phone number */
+            let fromNumber = utils.getRandomPhoneNumber()
+            let toNumber = utils.getRandomPhoneNumber()
             let leg1Scenario = JSON.parse(JSON.stringify(scenario))
             leg1Scenario.call.to = scenario.call.via
             let leg2Scenario = JSON.parse(JSON.stringify(scenario))
             leg2Scenario.call.from = scenario.call.via
-            let session1 = sessionModule.createSession(leg1Scenario)
-            let session2 = sessionModule.createSession(leg2Scenario, session1.callid)
+            let session1 = sessionModule.createSession(leg1Scenario, fromNumber, toNumber)
+            let session2 = sessionModule.createSession(leg2Scenario, fromNumber, toNumber, session1.callid)
             sessionModule.sessions.push(session1)
             sessionModule.sessions.push(session2)
         } else {
@@ -486,10 +477,47 @@ sessionModule.initializeScenario = function (scenario) {
 }
 
 /**
+ * Create individual sessions
+ * @param {SCENARIO} scenario 
+ * @returns 
+ */
+sessionModule.createSession = function (scenario, fromNumber, toNumber, correlation_id) {
+    /**
+     * @type {{callid: string, seq: number, duration: number, via: string, from_user: string, from_ip: string, to_user: string, to_ip: string, target_duration: number, mos_range: number[], jitter_range: number[], packetloss_range: number[], state: string, callflow: string, mediaInfo: MEDIAINFO}}
+     */
+    let session = {
+        callid: 'sim_' + utils.generateRandomString(8),
+        seq: utils.getRandomInt(1000, 9999),
+        duration: 0,
+        via: scenario.call.via || null,
+        from_user: fromNumber || utils.getRandomPhoneNumber(),
+        from_ip: simulationModule.infrastructure[scenario.call.from].ip,
+        to_user: toNumber || utils.getRandomPhoneNumber(),
+        to_ip: simulationModule.infrastructure[scenario.call.to].ip,
+        target_duration: utils.getRandomInt(scenario.call.duration[0], scenario.call.duration[1]) * 1000,
+        mos_range: scenario.call.mos,
+        jitter_range: scenario.call.jitter,
+        packetloss_range: scenario.call.packetloss,
+        state: '0',
+        callflow: scenario.callflow,
+        mediaInfo: {srcPort: 26768, dstPort: 51354, mean_mos: 0, mean_jitter: 0, mean_packetloss: 0, mean_rfactor: 0}
+    }
+    if (correlation_id) {
+        session.correlation_id = correlation_id
+    }
+    let captureId = simulationModule.infrastructure[scenario.call.from].captureId || simulationModule.infrastructure[scenario.call.to].captureId || 12345
+    session.outDirection = hepModule.generateRCInfo(captureId, 'hep', 1, session?.correlation_id || session.callid, 1, session.from_ip, session.to_ip, 5060, 5060)
+    session.outMedia = hepModule.generateRCInfo(captureId, 'hep', 1, session?.correlation_id || session.callid, 1, session.from_ip, session.to_ip, session.mediaInfo.srcPort, session.mediaInfo.dstPort)
+    session.inDirection = hepModule.generateRCInfo(captureId, 'hep', 1, session?.correlation_id || session.callid, 1, session.to_ip, session.from_ip, 5060, 5060)
+    session.inMedia = hepModule.generateRCInfo(captureId, 'hep', 1, session?.correlation_id || session.callid, 1, session.to_ip, session.from_ip, session.mediaInfo.dstPort, session.mediaInfo.srcPort)
+    return session
+}
+
+/**
  * Update all sessions
  * Here we initiate sending HEP and track the state of the sessions
  */
-sessionModule.update = function (moment) {
+sessionModule.update = async function (moment) {
     /* console.log('Updating Sessions') */
     for (let i = 0; i < sessionModule.sessions.length; i++) {
         let session = sessionModule.sessions[i]
@@ -501,12 +529,12 @@ sessionModule.update = function (moment) {
             }
             let invite = hepModule.generateInvite(session.seq, session.from_user, session.to_user, session.callid, session.outDirection, via)
 
-            senderModule.send(invite)
+            await senderModule.send(invite)
             session.state++
             continue
         } else if (sessionModule.callFlows[session.callflow][session.state] == '200OK') {
             let ok200 = hepModule.generate200OKInvite(session.seq, session.from_user, session.to_user, session.callid, session.inDirection)
-            senderModule.send(ok200)
+            await senderModule.send(ok200)
             session.state++
             /* Starting the call duration */
             session.start = moment
@@ -516,27 +544,26 @@ sessionModule.update = function (moment) {
             let duration = moment - session.reportingStart
             session.duration = moment - session.start
             if (duration > 30000 && session.duration < session.target_duration) {
-                let media = hepModule.generatePeriodicReport(session.callid, session.inDirection, { mos: 4.5, jitter: 0, packetloss: 0 })
-                senderModule.send(media)
-                let mediaBack = hepModule.generatePeriodicReport(session.callid, session.outDirection, { mos: 4.5, jitter: 0, packetloss: 0 })
-                senderModule.send(mediaBack)
+                let media = hepModule.generatePeriodicReport(session.callid, session.inMedia, { mos: 4.5, jitter: 0, packetloss: 0 })
+                await senderModule.send(media)
+                let mediaBack = hepModule.generatePeriodicReport(session.callid, session.outMedia, { mos: 4.5, jitter: 0, packetloss: 0 })
+                await senderModule.send(mediaBack)
                 session.reportingStart = moment
                 continue
             } else if (session.duration > session.target_duration) {
+                let final = hepModule.generateFinalReport(session.callid, session.inMedia, { mos: 4.5, jitter: 0, packetloss: 0, direction: 0 })
+                await senderModule.send(final)
+                let hangup = hepModule.generateHangupReport(session.callid, session.inMedia, { mos: 4.5, jitter: 0, packetloss: 0, direction: 0 })
+                await senderModule.send(hangup)
+                let shortHangup = hepModule.generateShortHangupReport(session.callid, session.inMedia, { mos: 4.5, jitter: 0, packetloss: 0, direction: 0 })
+                await senderModule.send(shortHangup)
 
-                let final = hepModule.generateFinalReport(session.callid, session.inDirection, { mos: 4.5, jitter: 0, packetloss: 0, direction: 0 })
-                senderModule.send(final)
-                let hangup = hepModule.generateHangupReport(session.callid, session.inDirection, { mos: 4.5, jitter: 0, packetloss: 0 })
-                senderModule.send(hangup)
-                let shortHangup = hepModule.generateShortHangupReport(session.callid, session.inDirection, { mos: 4.5, jitter: 0, packetloss: 0 })
-                senderModule.send(shortHangup)
-
-                let finalBack = hepModule.generateFinalReport(session.callid, session.outDirection, { mos: 4.5, jitter: 0, packetloss: 0, direction: 1 })
-                senderModule.send(finalBack)
-                let hangupBack = hepModule.generateHangupReport(session.callid, session.outDirection, { mos: 4.5, jitter: 0, packetloss: 0 })
-                senderModule.send(hangupBack)
-                let shortHangupBack = hepModule.generateShortHangupReport(session.callid, session.outDirection, { mos: 4.5, jitter: 0, packetloss: 0 })
-                senderModule.send(shortHangupBack)
+                let finalBack = hepModule.generateFinalReport(session.callid, session.outMedia, { mos: 4.5, jitter: 0, packetloss: 0, direction: 1 })
+                await senderModule.send(finalBack)
+                let hangupBack = hepModule.generateHangupReport(session.callid, session.outMedia, { mos: 4.5, jitter: 0, packetloss: 0, direction: 1 })
+                await senderModule.send(hangupBack)
+                let shortHangupBack = hepModule.generateShortHangupReport(session.callid, session.outMedia, { mos: 4.5, jitter: 0, packetloss: 0, direction: 1 })
+                await senderModule.send(shortHangupBack)
 
                 session.state++
                 continue
@@ -544,12 +571,12 @@ sessionModule.update = function (moment) {
             continue
         } else if (sessionModule.callFlows[session.callflow][session.state] == 'BYE') {
             let bye = hepModule.generateBye(session.from_user, session.to_user, session.callid, session.outDirection)
-            senderModule.send(bye)
+            await senderModule.send(bye)
             session.state++
             continue
         } else if (sessionModule.callFlows[session.callflow][session.state] == '200BYE') {
             let bye200 = hepModule.generate200OKBye(session.from_user, session.to_user, session.callid, session.inDirection)
-            senderModule.send(bye200)
+            await senderModule.send(bye200)
             session.state++
             continue
         } else if (sessionModule.callFlows[session.callflow][session.state] == 'END') {
@@ -607,6 +634,7 @@ simulationModule.tick = function () {
 
 simulationModule.killSimulation = function () {
     simulationModule.killed = true
+    console.log('Finishing in Progress Calls, if you need to stop immediately, push CTRL-C again.')
     /* TODO: Allow all calls to finish, but stop new ones */
 }
 
