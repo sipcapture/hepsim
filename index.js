@@ -43,8 +43,24 @@ utils.generateRandomBranch = function () {
     return 'z9hG4bK' + utils.generateRandomString(6)
 }
 
+/**
+ * Function to generate a random interger between min and max
+ * @param {number} min 
+ * @param {number} max 
+ * @returns {integer} Random Integer between min and max
+ */
 utils.getRandomInt = function (min, max) {
-    return Math.floor(Math.random() * (max - min + 1)) + min
+    return Number.parseInt(Math.floor(Math.random() * (max - min + 1)) + min)
+}
+
+/**
+ * Function to generate a random float between min and max
+ * @param {number} min
+ * @param {number} max
+ * @returns {float} Random Float between min and max
+ */
+utils.getRandomFloat = function (min, max) {
+    return Number.parseFloat(Math.random() * (max - min) + min).toFixed(3)
 }
 
 utils.getRandomPhoneNumber = function () {
@@ -76,17 +92,19 @@ senderModule.establishConnection = async function () {
 
     return new Promise((resolve, reject) => {
         senderModule.socket.on('connect', () => {
-            console.log('Connected to HEP Server')
+            console.log('Connected to HEP Server', senderModule.receiver, senderModule.port)
             resolve()
         })
     })
 }
 
 senderModule.send = async function (hepPacket) {
+    /* TODO: Batch 5 Messages at a time, according to nodejs documentation this is faster */
     if (debug) console.log('Sending HEP Packet')
     if (debug) console.log(hepPacket)
     if (!senderModule.socket) {
         await senderModule.establishConnection()
+        await new Promise((resolve) => setTimeout(resolve, 100))
     }
 
     return new Promise((resolve, reject) => {
@@ -119,7 +137,7 @@ const hepModule = {}
 
 /**
  * @typedef MEDIAINFO
- * @type {{mos: number, jitter: number, packetloss: number}}
+ * @type { {mos: number, mean_mos: number, jitter: number, mean_jitter: number, packetloss: number, mean_packetloss: number, mean_rfactor: number, direction: number} }
  */
 
 /**
@@ -166,7 +184,7 @@ hepModule.generateRCInfo = function (captureId, capturePass, payload_type, corre
 hepModule.generateInvite = function (seq, from, to, callid, rcinfo, viaInfoArray) {
     let datenow = new Date().getTime()
     rcinfo.time_sec = Math.floor(datenow / 1000)
-    rcinfo.time_usec = (datenow - (rcinfo.time_sec*1000))*1000
+    rcinfo.time_usec = (datenow - (rcinfo.time_sec*1000)) * 1000
     let inviteRaw = []
     inviteRaw.push('INVITE sip:' + to + '@' + rcinfo.dstIp + ':' + rcinfo.dstPort + ' SIP/2.0\r\n')
     /* TODO Only add via when it's necessary */
@@ -176,7 +194,7 @@ hepModule.generateInvite = function (seq, from, to, callid, rcinfo, viaInfoArray
     inviteRaw.push('Call-ID: ' + callid + '\r\n')
     inviteRaw.push('CSeq: ' + seq + ' INVITE\r\n')
     inviteRaw.push('Max-Forwards: 70 \r\n')
-    /* TODO: Add X-CID header */
+    if (rcinfo?.correlation_id) inviteRaw.push('X-CID: ' + rcinfo.correlation_id + '\r\n')
     inviteRaw.push('Supported: replaces, path, timer, eventlist\r\n')
     inviteRaw.push('Allow: INVITE, ACK, OPTIONS, CANCEL, BYE, SUBSCRIBE, NOTIFY, INFO, REFER, UPDATE, MESSAGE\r\n')
     inviteRaw.push('Content-Type: application/sdp\r\n')
@@ -265,12 +283,12 @@ hepModule.generatePeriodicReport = function (callid, rcinfo, mediaInfo) {
     rcinfoRaw.payload_type = 'JSON'
     rcinfoRaw.proto_type = 34
     rcinfoRaw.correlation_id = callid
-    rcinfoRaw.mos = parseInt(403)
+    rcinfoRaw.mos = parseInt(mediaInfo.mean_mos * 100)
     let datenow = new Date().getTime()
     rcinfoRaw.time_sec = Math.floor(datenow / 1000)
     rcinfoRaw.time_usec = (datenow - (rcinfoRaw.time_sec*1000))*1000
     
-    let rawShortReport = '{"CORRELATION_ID":"' + callid + '","RTP_SIP_CALL_ID":"' + callid + '","DELTA":19.983,"JITTER":0.017,"REPORT_TS":' + new Date().getTime()/1000 + ',"TL_BYTE":0,"SKEW":0.000,"TOTAL_PK":1512,"EXPECTED_PK":1512,"PACKET_LOSS":0,"SEQ":0,"MAX_JITTER":0.010,"MAX_DELTA":20.024,"MAX_SKEW":0.172,"MEAN_JITTER":0.005,"MIN_MOS":4.032, "MEAN_MOS":4.032, "MOS":4.032,"RFACTOR":80.200,"MIN_RFACTOR":80.200,"MEAN_RFACTOR":80.200,"SRC_IP":"' + rcinfoRaw.srcIp + '", "SRC_PORT":26872, "DST_IP":"' +  rcinfoRaw.dstIp + '","DST_PORT":51354,"SRC_MAC":"00-30-48-7E-5D-C6","DST_MAC":"00-12-80-D7-38-5E","OUT_ORDER":0,"SSRC_CHG":0,"CODEC_PT":9, "CLOCK":8000,"CODEC_NAME":"g722","DIR":0,"REPORT_NAME":"' + rcinfoRaw.srcIp + ':26872","PARTY":0,"TYPE":"PERIODIC"}'
+    let rawShortReport = `{"CORRELATION_ID":"${callid}","RTP_SIP_CALL_ID":"${callid}","DELTA":19.983,"JITTER":0.017,"REPORT_TS":${new Date().getTime()/1000},"TL_BYTE":0,"SKEW":0.000,"TOTAL_PK":1512,"EXPECTED_PK":1512,"PACKET_LOSS":${mediaInfo.packetloss},"SEQ":0,"MAX_JITTER":0.010,"MAX_DELTA":20.024,"MAX_SKEW":0.172,"MEAN_JITTER":${mediaInfo.mean_jitter},"MIN_MOS":4.032, "MEAN_MOS":${mediaInfo.mean_mos}, "MOS":${mediaInfo.mean_mos},"RFACTOR":80.200,"MIN_RFACTOR":80.200,"MEAN_RFACTOR":80.200,"SRC_IP":"${rcinfoRaw.srcIp}", "SRC_PORT":${rcinfoRaw.srcPort}, "DST_IP":"${rcinfoRaw.dstIp}","DST_PORT":${rcinfoRaw.dstPort},"SRC_MAC":"00-30-48-7E-5D-C6","DST_MAC":"00-12-80-D7-38-5E","OUT_ORDER":0,"SSRC_CHG":0,"CODEC_PT":9, "CLOCK":8000,"CODEC_NAME":"G722","DIR":0,"REPORT_NAME":"${rcinfoRaw.srcIp}:${rcinfoRaw.srcPort}","PARTY":${mediaInfo.direction},"TYPE":"PERIODIC"}`
 
     return hepJs.encapsulate(rawShortReport, rcinfoRaw)
 }
@@ -293,8 +311,6 @@ hepModule.generateHangupReport = function (callid, rcinfo, mediaInfo) {
     let datenow = new Date().getTime()
     rcinfoRaw.time_sec = Math.floor(datenow / 1000)
     rcinfoRaw.time_usec = (datenow - (rcinfoRaw.time_sec*1000))*1000
-    /* TODO: Add RTP Start and Stop to mediaInfo */
-    /* TODO: Calculate MOS, RFACTOR, Jitter, Packetloss in mediaInfo */
     let rawHangupReport = `{"CORRELATION_ID":"${callid}","RTP_SIP_CALL_ID":"${callid}","DELTA":25.009,"JITTER":6.699,"REPORT_TS":${new Date().getTime() / 1000},"TL_BYTE":223320,"SKEW":5.941,"TOTAL_PK":997,"EXPECTED_PK":996,"PACKET_LOSS":0,"SEQ":0,"MAX_JITTER":10.378,"MAX_DELTA":53.889,"MAX_SKEW":26.510,"MEAN_JITTER":6.639,"MIN_MOS":4.030, "MEAN_MOS":4.030, "MOS":4.030,"RFACTOR":93.200,"MIN_RFACTOR":93.200,"MEAN_RFACTOR":93.200,"SRC_IP":"${rcinfoRaw.srcIp}", "SRC_PORT":${rcinfoRaw.srcPort}, "DST_IP":"${rcinfoRaw.dstIp}","DST_PORT":${rcinfoRaw.dstPort},"SRC_MAC":"08-00-27-57-CD-E8","DST_MAC":"08-00-27-57-CD-E9","OUT_ORDER":0,"SSRC_CHG":0,"CODEC_CH":0,"CODEC_PT":9, "CLOCK":8000,"CODEC_NAME":"G722","DIR":${mediaInfo.direction},"REPORT_NAME":"${rcinfoRaw.srcIp}:${rcinfoRaw.srcPort}","PARTY":${mediaInfo.direction},"IP_QOS":184,"INFO_VLAN":0,"VIDEO":0,"REPORT_START":${(new Date().getTime() / 1000) - 30},"REPORT_END":${new Date().getTime() / 1000},"SSRC":"0X6687F6CF","RTP_START":${new Date().getTime() - 30000},"RTP_STOP":${new Date().getTime()},"ONE_WAY_RTP":0,"EVENT":0,"STYPE":"SIP:REQ","TYPE":"HANGUP"}`
 
     return hepJs.encapsulate(rawHangupReport, rcinfoRaw)
@@ -340,8 +356,6 @@ hepModule.generateFinalReport = function (callid, rcinfo, mediaInfo) {
     rcinfoRaw.proto_type = 34
     rcinfoRaw.correlation_id = callid
     rcinfoRaw.mos = parseInt(440)
-    rcinfoRaw.cval1 = parseInt(440)
-    rcinfoRaw.cval2 = parseInt(802)
     let datenow = new Date().getTime()
     rcinfoRaw.time_sec = Math.floor(datenow / 1000)
     rcinfoRaw.time_usec = (datenow - (rcinfoRaw.time_sec*1000))*1000
@@ -423,11 +437,12 @@ hepModule.generate200OKBye = function (from, to, callid, rcinfo) {
 
 const sessionModule = {
     sessions: [],
+    scenarios: {},
 }
 
 sessionModule.callFlows = {
     'default': ['INVITE', '200OK', 'MEDIA', 'BYE', '200BYE', 'END'],
-    'auth': ['INVITE', '401', 'INVITEAUTH', '200OK', 'MEDIA', 'BYE', '200BYE', 'END'],
+    'auth': ['INVITE', '407', 'INVITEAUTH', '200OK', 'MEDIA', 'BYE', '200BYE', 'END'],
     'registration': ['REGISTER', '200OK', 'END'],
     'auth_register': ['REGISTER', '401', 'REGISTERAUTH', '200OK', 'END'],
     'dtmf': ['INVITE', '200OK', 'DTMF', 'MEDIA', 'BYE', '200BYE', 'END'],
@@ -441,12 +456,24 @@ sessionModule.callFlows = {
  * @param {CONFIG} config 
  */
 sessionModule.initializeSessions = function (config) {
-    console.log('Creating Sessions')
+    if (debug) console.log('Creating Sessions')
+    /* Calculate full amount of requested Sessions */
+    let fullAmount = 0
     for (let i = 0; i < config.scenarios.length; i++) {
         let scenario = config.scenarios[i]
-        sessionModule.initializeScenario(scenario)
+        if (scenario.call?.via) {
+            fullAmount += scenario.call.amount * 2
+        } else {
+            fullAmount += scenario.call.amount
+        }
     }
-    console.log(`Created ${sessionModule.sessions.length} Sessions`)
+    if (fullAmount > sessionModule.sessions.length) {
+        for (let i = 0; i < config.scenarios.length; i++) {
+            let scenario = config.scenarios[i]
+            sessionModule.initializeScenario(scenario)
+        }
+    }
+    if (debug) console.log(`Starting ${sessionModule.sessions.length} Sessions`)
 }
 
 /**
@@ -454,23 +481,37 @@ sessionModule.initializeSessions = function (config) {
  * @param {SCENARIO} scenario 
  */
 sessionModule.initializeScenario = function (scenario) {
-    console.log('Initializing Scenario ', scenario)
+    if (debug) console.log('Initializing Scenario ', scenario)
+    if (!Object.hasOwn(sessionModule.scenarios, scenario.name)) {
+        sessionModule.scenarios[scenario.name] = 0
+    }
     for (let i = 0; i < scenario.call.amount; i++) {
         if (scenario.call?.via) {
-            /* Generate from and to user phone number */
-            let fromNumber = utils.getRandomPhoneNumber()
-            let toNumber = utils.getRandomPhoneNumber()
-            let leg1Scenario = JSON.parse(JSON.stringify(scenario))
-            leg1Scenario.call.to = scenario.call.via
-            let leg2Scenario = JSON.parse(JSON.stringify(scenario))
-            leg2Scenario.call.from = scenario.call.via
-            let session1 = sessionModule.createSession(leg1Scenario, fromNumber, toNumber)
-            let session2 = sessionModule.createSession(leg2Scenario, fromNumber, toNumber, session1.callid)
-            sessionModule.sessions.push(session1)
-            sessionModule.sessions.push(session2)
+            if (scenario.call.amount *2 > sessionModule.scenarios[scenario.name]) {
+                /* Generate from and to user phone number */
+                let fromNumber = utils.getRandomPhoneNumber()
+                let toNumber = utils.getRandomPhoneNumber()
+                let leg1Scenario = JSON.parse(JSON.stringify(scenario))
+                leg1Scenario.call.to = scenario.call.via
+                let leg2Scenario = JSON.parse(JSON.stringify(scenario))
+                leg2Scenario.call.from = scenario.call.via
+                let session1 = sessionModule.createSession(leg1Scenario, fromNumber, toNumber)
+                let session2 = sessionModule.createSession(leg2Scenario, fromNumber, toNumber, session1.callid)
+                sessionModule.sessions.push(session1)
+                sessionModule.scenarios[scenario.name]++
+                sessionModule.sessions.push(session2)
+                sessionModule.scenarios[scenario.name]++
+            } else { 
+                break
+            }
         } else {
-            let session = sessionModule.createSession(scenario)
-            sessionModule.sessions.push(session)
+            if (scenario.call.amount *2 > sessionModule.scenarios[scenario.name]) {
+                let session = sessionModule.createSession(scenario)
+                sessionModule.sessions.push(session)
+                sessionModule.scenarios[scenario.name]++
+            } else { 
+                break
+            }
         }
     }
     return true
@@ -498,18 +539,20 @@ sessionModule.createSession = function (scenario, fromNumber, toNumber, correlat
         mos_range: scenario.call.mos,
         jitter_range: scenario.call.jitter,
         packetloss_range: scenario.call.packetloss,
+        name: scenario.name,
         state: '0',
         callflow: scenario.callflow,
-        mediaInfo: {srcPort: 26768, dstPort: 51354, mean_mos: 0, mean_jitter: 0, mean_packetloss: 0, mean_rfactor: 0}
+        mediaInfo: {mos: 0, mean_mos: 0, jitter: 0, mean_jitter: 0, packetloss: 0, mean_packetloss: 0, mean_rfactor: 0}
     }
     if (correlation_id) {
         session.correlation_id = correlation_id
     }
+    /* TODO: Randomize Ports for Media */
     let captureId = simulationModule.infrastructure[scenario.call.from].captureId || simulationModule.infrastructure[scenario.call.to].captureId || 12345
     session.outDirection = hepModule.generateRCInfo(captureId, 'hep', 1, session?.correlation_id || session.callid, 1, session.from_ip, session.to_ip, 5060, 5060)
-    session.outMedia = hepModule.generateRCInfo(captureId, 'hep', 1, session?.correlation_id || session.callid, 1, session.from_ip, session.to_ip, session.mediaInfo.srcPort, session.mediaInfo.dstPort)
+    session.outMedia = hepModule.generateRCInfo(captureId, 'hep', 1, session?.correlation_id || session.callid, 1, session.from_ip, session.to_ip, 26768, 51354)
     session.inDirection = hepModule.generateRCInfo(captureId, 'hep', 1, session?.correlation_id || session.callid, 1, session.to_ip, session.from_ip, 5060, 5060)
-    session.inMedia = hepModule.generateRCInfo(captureId, 'hep', 1, session?.correlation_id || session.callid, 1, session.to_ip, session.from_ip, session.mediaInfo.dstPort, session.mediaInfo.srcPort)
+    session.inMedia = hepModule.generateRCInfo(captureId, 'hep', 1, session?.correlation_id || session.callid, 1, session.to_ip, session.from_ip, 51354, 26768)
     return session
 }
 
@@ -544,25 +587,35 @@ sessionModule.update = async function (moment) {
             let duration = moment - session.reportingStart
             session.duration = moment - session.start
             if (duration > 30000 && session.duration < session.target_duration) {
-                let media = hepModule.generatePeriodicReport(session.callid, session.inMedia, { mos: 4.5, jitter: 0, packetloss: 0 })
+                /* TODO: Calculate MOS, RFACTOR, Jitter, Packetloss in mediaInfo */
+                let mos = utils.getRandomFloat(session.mos_range[0], session.mos_range[1])
+                let jitter = utils.getRandomFloat(session.jitter_range[0], session.jitter_range[1])
+                let packetloss = utils.getRandomFloat(session.packetloss_range[0], session.packetloss_range[1])
+                session.mediaInfo.mean_mos = (session.mediaInfo.mean_mos + mos) / 2
+                session.mediaInfo.mean_jitter = (session.mediaInfo.mean_jitter + jitter) / 2
+                session.mediaInfo.packetloss += packetloss
+                session.mediaInfo.direction = 0
+                let media = hepModule.generatePeriodicReport(session.callid, session.inMedia, session.mediaInfo)
                 await senderModule.send(media)
-                let mediaBack = hepModule.generatePeriodicReport(session.callid, session.outMedia, { mos: 4.5, jitter: 0, packetloss: 0 })
+                session.mediaInfo.direction = 1
+                let mediaBack = hepModule.generatePeriodicReport(session.callid, session.outMedia, session.mediaInfo)
                 await senderModule.send(mediaBack)
                 session.reportingStart = moment
                 continue
             } else if (session.duration > session.target_duration) {
-                let final = hepModule.generateFinalReport(session.callid, session.inMedia, { mos: 4.5, jitter: 0, packetloss: 0, direction: 0 })
+                session.mediaInfo.direction = 0
+                let final = hepModule.generateFinalReport(session.callid, session.inMedia, session.mediaInfo)
                 await senderModule.send(final)
-                let hangup = hepModule.generateHangupReport(session.callid, session.inMedia, { mos: 4.5, jitter: 0, packetloss: 0, direction: 0 })
+                let hangup = hepModule.generateHangupReport(session.callid, session.inMedia, session.mediaInfo)
                 await senderModule.send(hangup)
-                let shortHangup = hepModule.generateShortHangupReport(session.callid, session.inMedia, { mos: 4.5, jitter: 0, packetloss: 0, direction: 0 })
+                let shortHangup = hepModule.generateShortHangupReport(session.callid, session.inMedia, session.mediaInfo)
                 await senderModule.send(shortHangup)
-
-                let finalBack = hepModule.generateFinalReport(session.callid, session.outMedia, { mos: 4.5, jitter: 0, packetloss: 0, direction: 1 })
+                session.mediaInfo.direction = 1
+                let finalBack = hepModule.generateFinalReport(session.callid, session.outMedia, session.mediaInfo)
                 await senderModule.send(finalBack)
-                let hangupBack = hepModule.generateHangupReport(session.callid, session.outMedia, { mos: 4.5, jitter: 0, packetloss: 0, direction: 1 })
+                let hangupBack = hepModule.generateHangupReport(session.callid, session.outMedia, session.mediaInfo)
                 await senderModule.send(hangupBack)
-                let shortHangupBack = hepModule.generateShortHangupReport(session.callid, session.outMedia, { mos: 4.5, jitter: 0, packetloss: 0, direction: 1 })
+                let shortHangupBack = hepModule.generateShortHangupReport(session.callid, session.outMedia, session.mediaInfo)
                 await senderModule.send(shortHangupBack)
 
                 session.state++
@@ -581,6 +634,7 @@ sessionModule.update = async function (moment) {
             continue
         } else if (sessionModule.callFlows[session.callflow][session.state] == 'END') {
             if (debug) console.log('Session Ended', session.callid)
+            sessionModule.scenarios[session.name]--
             sessionModule.sessions.splice(i, 1)
             continue
         } else {
@@ -604,6 +658,7 @@ const simulationModule = {
     diff: 0,
     previous: Date.now(),
     infrastructure: {},
+    config: {},
 }
 
 /**
@@ -612,30 +667,48 @@ const simulationModule = {
  */
 simulationModule.initializeSimulation = function (config) {
     console.log('Initializing Simulation')
+    simulationModule.config = config
     console.log('Setting up Infrastructure')
     simulationModule.infrastructure = config.virtualInfrastructure
     console.log(config.scenarios)
-    console.log(simulationModule)
     sessionModule.initializeSessions(config)
     console.log('Simulation Initialized')
     return true
 }
 
+/**
+ * Tick function for the simulation
+ */
 simulationModule.tick = function () {
     simulationModule.diff = Date.now() - simulationModule.previous
-    if (simulationModule.diff > 1000) {
+    if (simulationModule.diff > 200) {
+        /* Update all sessions and send HEP accordingly */
         sessionModule.update(Date.now())
+
+        /* Check if simulation is still active */
+        if (!simulationModule.killed) {
+            sessionModule.initializeSessions(simulationModule.config)
+        } else {
+            console.log('Sessions Remaining', sessionModule.sessions.length)
+            console.log('Scenarios Remaining', sessionModule.scenarios)
+        }
+        /* Check if all sessions are finished */
+        if (sessionModule.sessions.length == 0) {
+            console.log('Simulation Finished')
+            process.exit()
+        }
         simulationModule.previous = Date.now()
     }
 
-    if (simulationModule.killed) return
-    setTimeout(simulationModule.tick, 200)
+    setTimeout(simulationModule.tick, 100)
 }
 
+/**
+ * Kill the Simulation - Sets switch to let simulation know to soft-close.
+ */
 simulationModule.killSimulation = function () {
     simulationModule.killed = true
     console.log('Finishing in Progress Calls, if you need to stop immediately, push CTRL-C again.')
-    /* TODO: Allow all calls to finish, but stop new ones */
 }
 
 
@@ -643,10 +716,10 @@ simulationModule.killSimulation = function () {
  * Main function
  */
 function main() {
-    console.log('******************|/')
+    console.log('**************** \\|/')
     console.log(' EXSPUE HEP!---->-*-')
-    console.log('******************|\\')
-    console.log('\n\nStarting Simulation')
+    console.log('**************** /|\\')
+    console.log('\n\nStarting Call Simulation')
     let config = JSON.parse(fs.readFileSync('config.json'))
     simulationModule.initializeSimulation(config)
     setTimeout(simulationModule.tick, 200)
