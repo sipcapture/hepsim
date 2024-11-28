@@ -137,7 +137,7 @@ const hepModule = {}
 
 /**
  * @typedef MEDIAINFO
- * @type { {mos: number, mean_mos: number, jitter: number, mean_jitter: number, packetloss: number, mean_packetloss: number, mean_rfactor: number, direction: number} }
+ * @type { {mos: float, mean_mos: float, jitter: float, mean_jitter: float, packetloss: integer, mean_rfactor: float, direction: number} }
  */
 
 /**
@@ -542,7 +542,7 @@ sessionModule.createSession = function (scenario, fromNumber, toNumber, correlat
         name: scenario.name,
         state: '0',
         callflow: scenario.callflow,
-        mediaInfo: {mos: 0, mean_mos: 0, jitter: 0, mean_jitter: 0, packetloss: 0, mean_packetloss: 0, mean_rfactor: 0}
+        mediaInfo: {mos: 0.0, mean_mos: 0.0, jitter: 0.0, mean_jitter: 0.0, packetloss: 0, mean_packetloss: 0, mean_rfactor: 0.0}
     }
     if (correlation_id) {
         session.correlation_id = correlation_id
@@ -590,7 +590,7 @@ sessionModule.update = async function (moment) {
                 /* TODO: Calculate MOS, RFACTOR, Jitter, Packetloss in mediaInfo */
                 let mos = utils.getRandomFloat(session.mos_range[0], session.mos_range[1])
                 let jitter = utils.getRandomFloat(session.jitter_range[0], session.jitter_range[1])
-                let packetloss = utils.getRandomFloat(session.packetloss_range[0], session.packetloss_range[1])
+                let packetloss = utils.getRandomInt(session.packetloss_range[0], session.packetloss_range[1])
                 session.mediaInfo.mean_mos = (session.mediaInfo.mean_mos + mos) / 2
                 session.mediaInfo.mean_jitter = (session.mediaInfo.mean_jitter + jitter) / 2
                 session.mediaInfo.packetloss += packetloss
