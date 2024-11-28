@@ -99,7 +99,6 @@ senderModule.establishConnection = async function () {
 }
 
 senderModule.send = async function (hepPacket) {
-    /* TODO: Batch 5 Messages at a time, according to nodejs documentation this is faster */
     if (debug) console.log('Sending HEP Packet')
     if (debug) console.log(hepPacket)
     if (!senderModule.socket) {
@@ -542,7 +541,7 @@ sessionModule.createSession = function (scenario, fromNumber, toNumber, correlat
         name: scenario.name,
         state: '0',
         callflow: scenario.callflow,
-        mediaInfo: {mos: 0.0, mean_mos: 0.0, jitter: 0.0, mean_jitter: 0.0, packetloss: 0, mean_packetloss: 0, mean_rfactor: 0.0}
+        mediaInfo: {mos: parseFloat(0.0), mean_mos: parseFloat(0.0), jitter: parseFloat(0.0), mean_jitter: parseFloat(0.0), packetloss: parseInt(0), mean_rfactor: parseFloat(0.0)}
     }
     if (correlation_id) {
         session.correlation_id = correlation_id
