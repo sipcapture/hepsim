@@ -29,6 +29,11 @@ process.on('SIGINT', function() {
 
 const utils = {}
 
+/**
+ * Function to generate a Random String with x length
+ * @param {integer} length 
+ * @returns 
+ */
 utils.generateRandomString = function (length) {
     let result = ''
     let characters = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789'
@@ -39,8 +44,12 @@ utils.generateRandomString = function (length) {
     return result
 }
 
+/**
+ * Function to generate a Random Branch String
+ * @returns {string} Random Branch String
+ */
 utils.generateRandomBranch = function () {
-    return 'z9hG4bK' + utils.generateRandomString(6)
+    return 'z9hG4bK' + utils.generateRandomString(8)
 }
 
 /**
@@ -63,6 +72,10 @@ utils.getRandomFloat = function (min, max) {
     return Number.parseFloat(Math.random() * (max - min) + min).toFixed(3)
 }
 
+/**
+ * Function to generate a random phone number with +1 prefix
+ * @returns {string} Random Phone Number
+ */
 utils.getRandomPhoneNumber = function () {
     return '+1' + utils.getRandomInt(1000000000, 9999999999)
 }
@@ -434,10 +447,10 @@ hepModule.generate200OKBye = function (from, to, callid, rcinfo) {
 * Session Module
 */
 
-const sessionModule = {
-    sessions: [],
-    scenarios: {},
-}
+const sessionModule = {}
+
+sessionModule.sessions = []
+sessionModule.scenarios = {}
 
 sessionModule.callFlows = {
     'default': ['INVITE', '200OK', 'MEDIA', 'BYE', '200BYE', 'END'],
@@ -448,10 +461,8 @@ sessionModule.callFlows = {
     'timeout408': ['INVITE', '100', '200OK', 'ACK', 'BYE', '408', 'END'],
 }
 
-
-
 /**
- * initialize all sessions for all scenarios
+ * Initialize all Sessions with a given configuration
  * @param {CONFIG} config 
  */
 sessionModule.initializeSessions = function (config) {
@@ -519,12 +530,9 @@ sessionModule.initializeScenario = function (scenario) {
 /**
  * Create individual sessions
  * @param {SCENARIO} scenario 
- * @returns 
+ * @returns {{callid: string, seq: number, duration: number, via: string, from_user: string, from_ip: string, to_user: string, to_ip: string, target_duration: number, mos_range: number[], jitter_range: number[], packetloss_range: number[], state: string, callflow: string, mediaInfo: MEDIAINFO}} Session Object
  */
 sessionModule.createSession = function (scenario, fromNumber, toNumber, correlation_id) {
-    /**
-     * @type {{callid: string, seq: number, duration: number, via: string, from_user: string, from_ip: string, to_user: string, to_ip: string, target_duration: number, mos_range: number[], jitter_range: number[], packetloss_range: number[], state: string, callflow: string, mediaInfo: MEDIAINFO}}
-     */
     let session = {
         callid: 'sim_' + utils.generateRandomString(8),
         seq: utils.getRandomInt(1000, 9999),
@@ -585,7 +593,7 @@ sessionModule.update = async function (moment) {
         } else if (sessionModule.callFlows[session.callflow][session.state] == 'MEDIA') {
             let duration = moment - session.reportingStart
             session.duration = moment - session.start
-            if (duration > 30000 && session.duration < session.target_duration) {
+            if (duration > 30000 && session.duration < session.target_duration && session.target_duration > 30000) {
                 /* TODO: Calculate MOS, RFACTOR, Jitter, Packetloss in mediaInfo */
                 let mos = utils.getRandomFloat(session.mos_range[0], session.mos_range[1])
                 let jitter = utils.getRandomFloat(session.jitter_range[0], session.jitter_range[1])
@@ -602,6 +610,14 @@ sessionModule.update = async function (moment) {
                 session.reportingStart = moment
                 continue
             } else if (session.duration > session.target_duration) {
+                if(session.target_duration < 30000) {
+                    let mos = utils.getRandomFloat(session.mos_range[0], session.mos_range[1])
+                    let jitter = utils.getRandomFloat(session.jitter_range[0], session.jitter_range[1])
+                    let packetloss = utils.getRandomInt(session.packetloss_range[0], session.packetloss_range[1])
+                    session.mediaInfo.mean_mos = (session.mediaInfo.mean_mos + mos) / 2
+                    session.mediaInfo.mean_jitter = (session.mediaInfo.mean_jitter + jitter) / 2
+                    session.mediaInfo.packetloss += packetloss
+                }
                 session.mediaInfo.direction = 0
                 let final = hepModule.generateFinalReport(session.callid, session.inMedia, session.mediaInfo)
                 await senderModule.send(final)
@@ -652,13 +668,13 @@ sessionModule.update = async function (moment) {
 * Simulation
 */
 
-const simulationModule = {
-    start: Date.now(),
-    diff: 0,
-    previous: Date.now(),
-    infrastructure: {},
-    config: {},
-}
+const simulationModule = {}
+
+simulationModule.start = Date.now()
+simulationModule.diff = 0
+simulationModule.previous = Date.now()
+simulationModule.infrastructure = {}
+simulationModule.config = {}
 
 /**
  * Initialize the Simulation with a config
