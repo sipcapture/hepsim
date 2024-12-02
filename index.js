@@ -319,11 +319,11 @@ hepModule.generateHangupReport = function (callid, rcinfo, mediaInfo) {
     rcinfoRaw.payload_type = 'JSON'
     rcinfoRaw.proto_type = 34
     rcinfoRaw.correlation_id = callid
-    rcinfoRaw.mos = parseInt(403)
+    rcinfoRaw.mos = parseInt(mediaInfo.mean_mos * 100)
     let datenow = new Date().getTime()
     rcinfoRaw.time_sec = Math.floor(datenow / 1000)
     rcinfoRaw.time_usec = (datenow - (rcinfoRaw.time_sec*1000))*1000
-    let rawHangupReport = `{"CORRELATION_ID":"${callid}","RTP_SIP_CALL_ID":"${callid}","DELTA":25.009,"JITTER":6.699,"REPORT_TS":${new Date().getTime() / 1000},"TL_BYTE":223320,"SKEW":5.941,"TOTAL_PK":997,"EXPECTED_PK":996,"PACKET_LOSS":0,"SEQ":0,"MAX_JITTER":10.378,"MAX_DELTA":53.889,"MAX_SKEW":26.510,"MEAN_JITTER":6.639,"MIN_MOS":4.030, "MEAN_MOS":4.030, "MOS":4.030,"RFACTOR":93.200,"MIN_RFACTOR":93.200,"MEAN_RFACTOR":93.200,"SRC_IP":"${rcinfoRaw.srcIp}", "SRC_PORT":${rcinfoRaw.srcPort}, "DST_IP":"${rcinfoRaw.dstIp}","DST_PORT":${rcinfoRaw.dstPort},"SRC_MAC":"08-00-27-57-CD-E8","DST_MAC":"08-00-27-57-CD-E9","OUT_ORDER":0,"SSRC_CHG":0,"CODEC_CH":0,"CODEC_PT":9, "CLOCK":8000,"CODEC_NAME":"G722","DIR":${mediaInfo.direction},"REPORT_NAME":"${rcinfoRaw.srcIp}:${rcinfoRaw.srcPort}","PARTY":${mediaInfo.direction},"IP_QOS":184,"INFO_VLAN":0,"VIDEO":0,"REPORT_START":${(new Date().getTime() / 1000) - 30},"REPORT_END":${new Date().getTime() / 1000},"SSRC":"0X6687F6CF","RTP_START":${new Date().getTime() - 30000},"RTP_STOP":${new Date().getTime()},"ONE_WAY_RTP":0,"EVENT":0,"STYPE":"SIP:REQ","TYPE":"HANGUP"}`
+    let rawHangupReport = `{"CORRELATION_ID":"${callid}","RTP_SIP_CALL_ID":"${callid}","DELTA":25.009,"JITTER":6.699,"REPORT_TS":${new Date().getTime() / 1000},"TL_BYTE":223320,"SKEW":5.941,"TOTAL_PK":997,"EXPECTED_PK":996,"PACKET_LOSS":${mediaInfo.packetloss},"SEQ":0,"MAX_JITTER":10.378,"MAX_DELTA":53.889,"MAX_SKEW":26.510,"MEAN_JITTER":${mediaInfo.mean_jitter},"MIN_MOS":4.030, "MEAN_MOS":${mediaInfo.mean_mos}, "MOS":${mediaInfo.mean_mos},"RFACTOR":${mediaInfo.mean_rfactor},"MIN_RFACTOR":93.200,"MEAN_RFACTOR":${mediaInfo.mean_rfactor},"SRC_IP":"${rcinfoRaw.srcIp}", "SRC_PORT":${rcinfoRaw.srcPort}, "DST_IP":"${rcinfoRaw.dstIp}","DST_PORT":${rcinfoRaw.dstPort},"SRC_MAC":"08-00-27-57-CD-E8","DST_MAC":"08-00-27-57-CD-E9","OUT_ORDER":0,"SSRC_CHG":0,"CODEC_CH":0,"CODEC_PT":9, "CLOCK":8000,"CODEC_NAME":"G722","DIR":${mediaInfo.direction},"REPORT_NAME":"${rcinfoRaw.srcIp}:${rcinfoRaw.srcPort}","PARTY":${mediaInfo.direction},"IP_QOS":184,"INFO_VLAN":0,"VIDEO":0,"REPORT_START":${(new Date().getTime() / 1000) - 30},"REPORT_END":${new Date().getTime() / 1000},"SSRC":"0X6687F6CF","RTP_START":${new Date().getTime() - 30000},"RTP_STOP":${new Date().getTime()},"ONE_WAY_RTP":0,"EVENT":0,"STYPE":"SIP:REQ","TYPE":"HANGUP"}`
 
     return hepJs.encapsulate(rawHangupReport, rcinfoRaw)
 }
@@ -342,13 +342,13 @@ hepModule.generateShortHangupReport = function (callid, rcinfo, mediaInfo) {
     rcinfoRaw.payload_type = 'JSON'
     rcinfoRaw.proto_type = 35
     rcinfoRaw.correlation_id = callid
-    rcinfoRaw.mos = parseInt(403)
+    rcinfoRaw.mos = parseInt(mediaInfo.mean_mos * 100)
     let datenow = new Date().getTime()
     rcinfoRaw.time_sec = Math.floor(datenow / 1000)
     rcinfoRaw.time_usec = (datenow - (rcinfoRaw.time_sec*1000))*1000
     /* TODO: Add RTP Start and Stop to mediaInfo */
     /* TODO: Calculate MOS, RFACTOR, Jitter, Packetloss in mediaInfo */
-    let rawHangupReport = `{"CORRELATION_ID":"${callid}","RTP_SIP_CALL_ID":"${callid}","PACKET_LOSS":0,"EXPECTED_PK":996,"CODEC_PT":9,"CODEC_NAME":"G722","CODEC_RATE":8000,"MEAN_JITTER":6.639,"MOS":4.030,"RFACTOR":93.200,"DIR":${mediaInfo.direction},"ONE_WAY_RTP":0,"REPORT_NAME":"${rcinfoRaw.srcIp}:26876","PARTY":${mediaInfo.direction},"TYPE":"HANGUP"}`
+    let rawHangupReport = `{"CORRELATION_ID":"${callid}","RTP_SIP_CALL_ID":"${callid}","PACKET_LOSS":${mediaInfo.packetloss},"EXPECTED_PK":996,"CODEC_PT":9,"CODEC_NAME":"G722","CODEC_RATE":8000,"MEAN_JITTER":${mediaInfo.mean_jitter},"MOS":${mediaInfo.mean_mos},"RFACTOR":${mediaInfo.mean_rfactor},"DIR":${mediaInfo.direction},"ONE_WAY_RTP":0,"REPORT_NAME":"${rcinfoRaw.srcIp}:26876","PARTY":${mediaInfo.direction},"TYPE":"HANGUP"}`
 
     return hepJs.encapsulate(rawHangupReport, rcinfoRaw)
 }
@@ -367,12 +367,12 @@ hepModule.generateFinalReport = function (callid, rcinfo, mediaInfo) {
     rcinfoRaw.payload_type = 'JSON'
     rcinfoRaw.proto_type = 34
     rcinfoRaw.correlation_id = callid
-    rcinfoRaw.mos = parseInt(440)
+    rcinfoRaw.mos = parseInt(mediaInfo.mean_mos * 100)
     let datenow = new Date().getTime()
     rcinfoRaw.time_sec = Math.floor(datenow / 1000)
     rcinfoRaw.time_usec = (datenow - (rcinfoRaw.time_sec*1000))*1000
-    
-    let rawFinalReport = '{"CORRELATION_ID":"' + callid + '", "RTP_SIP_CALL_ID":"' + callid + '","MIN_MOS":4.409, "MIN_RFACTOR":93.200, "MIN_SKEW": 0, "MIN_JITTER":0, "MAX_MOS": 4.409, "MAX_RFACTOR":93.200, "MAX_SKEW":0, "MAX_JITTER":4.409, "MEAN_MOS": 4.409, "MEAN_RFACTOR":93.200, "MEAN_JITTER":0, "TOTAL_PACKET_LOSS":0,"TOTAL_PACKETS":5000,"DIR": ' + mediaInfo.direction + ',"REPORT_NAME":"' + rcinfoRaw.srcIp + '","PARTY": ' + mediaInfo.direction + ', "ONE_WAY_RTP": 0, "TYPE":"FINAL"}'
+    /* TODO: change format to use `` */
+    let rawFinalReport = '{"CORRELATION_ID":"' + callid + '", "RTP_SIP_CALL_ID":"' + callid + '","MIN_MOS":4.409, "MIN_RFACTOR":93.200, "MIN_SKEW": 0, "MIN_JITTER":0, "MAX_MOS": 4.409, "MAX_RFACTOR":93.200, "MAX_SKEW":0, "MAX_JITTER":4.409, "MEAN_MOS":' + mediaInfo.mean_mos + ', "MEAN_RFACTOR":' + mediaInfo.mean_rfactor + ', "MEAN_JITTER":' + mediaInfo.mean_jitter + ', "TOTAL_PACKET_LOSS":' + mediaInfo.packetloss + ',"TOTAL_PACKETS":5000,"DIR": ' + mediaInfo.direction + ',"REPORT_NAME":"' + rcinfoRaw.srcIp + '","PARTY": ' + mediaInfo.direction + ', "ONE_WAY_RTP": 0, "TYPE":"FINAL"}'
 
     return hepJs.encapsulate(rawFinalReport, rcinfoRaw)
 }
@@ -651,6 +651,10 @@ sessionModule.update = async function (moment) {
             if (debug) console.log('Session Ended', session.callid)
             sessionModule.scenarios[session.name]--
             sessionModule.sessions.splice(i, 1)
+            if(simulationModule.killed) {
+                console.log('Sessions Remaining', sessionModule.sessions.length)
+                console.log('Scenarios Remaining', sessionModule.scenarios)
+            }
             continue
         } else {
             console.log('Unknown State')
@@ -703,10 +707,7 @@ simulationModule.tick = function () {
         /* Check if simulation is still active */
         if (!simulationModule.killed) {
             sessionModule.initializeSessions(simulationModule.config)
-        } else {
-            console.log('Sessions Remaining', sessionModule.sessions.length)
-            console.log('Scenarios Remaining', sessionModule.scenarios)
-        }
+        } 
         /* Check if all sessions are finished */
         if (sessionModule.sessions.length == 0) {
             console.log('Simulation Finished')
