@@ -282,6 +282,34 @@ hepModule.generate200OKInvite = function (seq, from, to, callid, rcinfo) {
 }
 
 /**
+ * Generate a 200 OK ACK for a SIP Invite
+ * @param {string} seq
+ * @param {string} from 
+ * @param {string} to 
+ * @param {string} callid 
+ * @param {RCINFO} rcinfo 
+ */
+hepModule.generate200OKAck = function (seq, from, to, callid, rcinfo) {
+    let datenow = new Date().getTime()
+    rcinfo.time_sec = Math.floor(datenow / 1000)
+    rcinfo.time_usec = (datenow - (rcinfo.time_sec*1000))*1000
+
+    let raw200OKAck = []
+
+    raw200OKAck.push('ACK sip:' + to + '@' + rcinfo.dstIp + ':' + rcinfo.dstPort + ' SIP/2.0\r\n')
+    raw200OKAck.push('Via: SIP/2.0/UDP ' + rcinfo.srcIp + ':' + rcinfo.srcPort + ';branch=' + utils.generateRandomBranch() + '\r\n')
+    raw200OKAck.push('From: <sip:' + from + '@' + rcinfo.srcIp + ':' + rcinfo.srcPort + '>;tag=06DE7CEB-56E458BB000864AD-B855F700\r\n')
+    raw200OKAck.push('To: <sip:' + to + '@' + rcinfo.dstIp + ':' + rcinfo.dstPort + '>\r\n')
+    raw200OKAck.push('Call-ID: ' + callid + '\r\n')
+    raw200OKAck.push('CSeq: ' + seq + ' ACK\r\n')
+    raw200OKAck.push('Max-Forwards: 70\r\n')
+    raw200OKAck.push('Content-Length: 0\r\n')
+    raw200OKAck.push('\r\n\r\n')
+
+    return hepJs.encapsulate(raw200OKAck.join(''), rcinfo)
+}
+
+/**
  * Generate a Periodic RTP report
  * @param {string} from 
  * @param {string} to 
@@ -323,7 +351,7 @@ hepModule.generateHangupReport = function (callid, rcinfo, mediaInfo) {
     let datenow = new Date().getTime()
     rcinfoRaw.time_sec = Math.floor(datenow / 1000)
     rcinfoRaw.time_usec = (datenow - (rcinfoRaw.time_sec*1000))*1000
-    let rawHangupReport = `{"CORRELATION_ID":"${callid}","RTP_SIP_CALL_ID":"${callid}","DELTA":25.009,"JITTER":6.699,"REPORT_TS":${new Date().getTime() / 1000},"TL_BYTE":223320,"SKEW":5.941,"TOTAL_PK":997,"EXPECTED_PK":996,"PACKET_LOSS":${mediaInfo.packetloss},"SEQ":0,"MAX_JITTER":10.378,"MAX_DELTA":53.889,"MAX_SKEW":26.510,"MEAN_JITTER":${mediaInfo.mean_jitter},"MIN_MOS":4.030, "MEAN_MOS":${mediaInfo.mean_mos}, "MOS":${mediaInfo.mean_mos},"RFACTOR":${mediaInfo.mean_rfactor},"MIN_RFACTOR":93.200,"MEAN_RFACTOR":${mediaInfo.mean_rfactor},"SRC_IP":"${rcinfoRaw.srcIp}", "SRC_PORT":${rcinfoRaw.srcPort}, "DST_IP":"${rcinfoRaw.dstIp}","DST_PORT":${rcinfoRaw.dstPort},"SRC_MAC":"08-00-27-57-CD-E8","DST_MAC":"08-00-27-57-CD-E9","OUT_ORDER":0,"SSRC_CHG":0,"CODEC_CH":0,"CODEC_PT":9, "CLOCK":8000,"CODEC_NAME":"G722","DIR":${mediaInfo.direction},"REPORT_NAME":"${rcinfoRaw.srcIp}:${rcinfoRaw.srcPort}","PARTY":${mediaInfo.direction},"IP_QOS":184,"INFO_VLAN":0,"VIDEO":0,"REPORT_START":${(new Date().getTime() / 1000) - 30},"REPORT_END":${new Date().getTime() / 1000},"SSRC":"0X6687F6CF","RTP_START":${new Date().getTime() - 30000},"RTP_STOP":${new Date().getTime()},"ONE_WAY_RTP":0,"EVENT":0,"STYPE":"SIP:REQ","TYPE":"HANGUP"}`
+    let rawHangupReport = `{"CORRELATION_ID":"${callid}","RTP_SIP_CALL_ID":"${callid}","DELTA":25.009,"JITTER":6.699,"REPORT_TS":${new Date().getTime() / 1000},"TL_BYTE":223320,"SKEW":5.941,"TOTAL_PK":997,"EXPECTED_PK":996,"PACKET_LOSS":${mediaInfo.packetloss},"SEQ":0,"MAX_JITTER":10.378,"MAX_DELTA":53.889,"MAX_SKEW":26.510,"MEAN_JITTER":${mediaInfo.mean_jitter},"MIN_MOS":4.030, "MEAN_MOS":${mediaInfo.mean_mos}, "MOS":${mediaInfo.mean_mos},"RFACTOR":${mediaInfo.mean_rfactor},"MIN_RFACTOR":93.200,"MEAN_RFACTOR":${mediaInfo.mean_rfactor},"SRC_IP":"${rcinfoRaw.srcIp}", "SRC_PORT":${rcinfoRaw.srcPort}, "DST_IP":"${rcinfoRaw.dstIp}","DST_PORT":${rcinfoRaw.dstPort},"SRC_MAC":"08-00-27-57-CD-E8","DST_MAC":"08-00-27-57-CD-E9","OUT_ORDER":0,"SSRC_CHG":0,"CODEC_CH":0,"CODEC_PT":9, "CLOCK":8000,"CODEC_NAME":"G722","DIR":${mediaInfo.direction},"REPORT_NAME":"${rcinfoRaw.srcIp}:${rcinfoRaw.srcPort}","PARTY":${mediaInfo.direction},"IP_QOS":184,"INFO_VLAN":0,"VIDEO":0,"REPORT_START":${(new Date().getTime() / 1000) - 30},"REPORT_END":${new Date().getTime() / 1000},"SSRC":"0X6687F6CF","RTP_START":${mediaInfo.lastReport},"RTP_STOP":${new Date().getTime()},"ONE_WAY_RTP":0,"EVENT":0,"STYPE":"SIP:REQ","TYPE":"HANGUP"}`
 
     return hepJs.encapsulate(rawHangupReport, rcinfoRaw)
 }
@@ -346,8 +374,6 @@ hepModule.generateShortHangupReport = function (callid, rcinfo, mediaInfo) {
     let datenow = new Date().getTime()
     rcinfoRaw.time_sec = Math.floor(datenow / 1000)
     rcinfoRaw.time_usec = (datenow - (rcinfoRaw.time_sec*1000))*1000
-    /* TODO: Add RTP Start and Stop to mediaInfo */
-    /* TODO: Calculate MOS, RFACTOR, Jitter, Packetloss in mediaInfo */
     let rawHangupReport = `{"CORRELATION_ID":"${callid}","RTP_SIP_CALL_ID":"${callid}","PACKET_LOSS":${mediaInfo.packetloss},"EXPECTED_PK":996,"CODEC_PT":9,"CODEC_NAME":"G722","CODEC_RATE":8000,"MEAN_JITTER":${mediaInfo.mean_jitter},"MOS":${mediaInfo.mean_mos},"RFACTOR":${mediaInfo.mean_rfactor},"DIR":${mediaInfo.direction},"ONE_WAY_RTP":0,"REPORT_NAME":"${rcinfoRaw.srcIp}:26876","PARTY":${mediaInfo.direction},"TYPE":"HANGUP"}`
 
     return hepJs.encapsulate(rawHangupReport, rcinfoRaw)
@@ -452,12 +478,12 @@ sessionModule.sessions = []
 sessionModule.scenarios = {}
 
 sessionModule.callFlows = {
-    'default': ['INVITE', '200OK', 'MEDIA', 'BYE', '200BYE', 'END'],
-    'auth': ['INVITE', '407', 'INVITEAUTH', '200OK', 'MEDIA', 'BYE', '200BYE', 'END'],
+    'default': ['INVITE', '200OK', '200OKACK', 'MEDIA', 'BYE', '200BYE', 'END'],
+    'auth': ['INVITE', '407', 'INVITEAUTH', '200OK', '200OKACK', 'MEDIA', 'BYE', '200BYE', 'END'],
     'registration': ['REGISTER', '200OK', 'END'],
     'auth_register': ['REGISTER', '401', 'REGISTERAUTH', '200OK', 'END'],
     'dtmf': ['INVITE', '200OK', 'DTMF', 'MEDIA', 'BYE', '200BYE', 'END'],
-    'timeout408': ['INVITE', '100', '200OK', 'ACK', 'BYE', '408', 'END'],
+    'timeout408': ['INVITE', '100', '200OK', '200OKACK', 'BYE', '408', 'END'],
 }
 
 /**
@@ -589,11 +615,15 @@ sessionModule.update = async function (moment) {
             session.start = moment
             session.reportingStart = moment
             continue
+        } else if (sessionModule.callFlows[session.callflow][session.state] == '200OKACK') {
+            let ack200 = hepModule.generate200OKAck(session.from_user, session.to_user, session.callid, session.outDirection)
+            await senderModule.send(ack200)
+            session.state++
+            continue
         } else if (sessionModule.callFlows[session.callflow][session.state] == 'MEDIA') {
             let duration = moment - session.reportingStart
             session.duration = moment - session.start
             if (duration > 30000 && session.duration < session.target_duration && session.target_duration > 30000) {
-                /* TODO: Calculate MOS, RFACTOR, Jitter, Packetloss in mediaInfo */
                 /* TODO: RFactor Calculation */
                 let mos = utils.getRandomFloat(session.mos_range[0], session.mos_range[1])
                 let jitter = utils.getRandomFloat(session.jitter_range[0], session.jitter_range[1])
@@ -610,6 +640,7 @@ sessionModule.update = async function (moment) {
                 let mediaBack = hepModule.generatePeriodicReport(session.callid, session.outMedia, session.mediaInfo)
                 await senderModule.send(mediaBack)
                 session.reportingStart = moment
+
                 continue
             } else if (session.duration > session.target_duration) {
                 if(session.target_duration < 30000) {
@@ -622,6 +653,7 @@ sessionModule.update = async function (moment) {
                     session.mediaInfo.mean_jitter = parseFloat(parseFloat((session.mediaInfo.mean_jitter + jitter) / 2).toFixed(3)) 
                     session.mediaInfo.packetloss += packetloss
                 }
+                session.lastReport = session.reportingStart
                 session.mediaInfo.direction = 0
                 let final = hepModule.generateFinalReport(session.callid, session.inMedia, session.mediaInfo)
                 await senderModule.send(final)
@@ -642,6 +674,10 @@ sessionModule.update = async function (moment) {
             }
             continue
         } else if (sessionModule.callFlows[session.callflow][session.state] == 'BYE') {
+            session.duration = moment - session.start
+            if (session.duration < session.target_duration) {
+                continue
+            }
             let bye = hepModule.generateBye(session.from_user, session.to_user, session.callid, session.outDirection)
             await senderModule.send(bye)
             session.state++
@@ -729,8 +765,26 @@ simulationModule.tick = function () {
 simulationModule.killSimulation = function () {
     simulationModule.killed = true
     console.log('Finishing in Progress Calls, if you need to stop immediately, push CTRL-C again.')
+    console.log('Sessions Remaining', sessionModule.sessions.length)
+    console.log('Scenarios Remaining', sessionModule.scenarios)
 }
 
+/**
+ * Configuration Module
+ */
+
+const configModule = {}
+
+configModule.loadConfig = function () {
+    if (fs.existsSync('config.json')) {
+        return JSON.parse(fs.readFileSync('config.json'))
+    } else if (fs.existsSync('config.json.example')) {
+        return JSON.parse(fs.readFileSync('config.json.example'))
+    } else {
+        console.log('No Config file found')
+        process.exit(9)
+    }
+}
 
 /**
  * Main function
@@ -740,7 +794,7 @@ function main() {
     console.log(' EXSPUE HEP!---->-*-')
     console.log('**************** /|\\')
     console.log('\n\nStarting Call Simulation')
-    let config = JSON.parse(fs.readFileSync('config.json'))
+    let config = configModule.loadConfig()
     simulationModule.initializeSimulation(config)
     setTimeout(simulationModule.tick, 200)
 }
