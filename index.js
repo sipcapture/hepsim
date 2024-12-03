@@ -300,7 +300,7 @@ hepModule.generatePeriodicReport = function (callid, rcinfo, mediaInfo) {
     rcinfoRaw.time_sec = Math.floor(datenow / 1000)
     rcinfoRaw.time_usec = (datenow - (rcinfoRaw.time_sec*1000))*1000
     
-    let rawShortReport = `{"CORRELATION_ID":"${callid}","RTP_SIP_CALL_ID":"${callid}","DELTA":19.983,"JITTER":0.017,"REPORT_TS":${new Date().getTime()/1000},"TL_BYTE":0,"SKEW":0.000,"TOTAL_PK":1512,"EXPECTED_PK":1512,"PACKET_LOSS":${mediaInfo.packetloss},"SEQ":0,"MAX_JITTER":0.010,"MAX_DELTA":20.024,"MAX_SKEW":0.172,"MEAN_JITTER":${mediaInfo.mean_jitter},"MIN_MOS":4.032, "MEAN_MOS":${mediaInfo.mean_mos}, "MOS":${mediaInfo.mean_mos},"RFACTOR":80.200,"MIN_RFACTOR":80.200,"MEAN_RFACTOR":80.200,"SRC_IP":"${rcinfoRaw.srcIp}", "SRC_PORT":${rcinfoRaw.srcPort}, "DST_IP":"${rcinfoRaw.dstIp}","DST_PORT":${rcinfoRaw.dstPort},"SRC_MAC":"00-30-48-7E-5D-C6","DST_MAC":"00-12-80-D7-38-5E","OUT_ORDER":0,"SSRC_CHG":0,"CODEC_PT":9, "CLOCK":8000,"CODEC_NAME":"G722","DIR":0,"REPORT_NAME":"${rcinfoRaw.srcIp}:${rcinfoRaw.srcPort}","PARTY":${mediaInfo.direction},"TYPE":"PERIODIC"}`
+    let rawShortReport = `{"CORRELATION_ID":"${callid}","RTP_SIP_CALL_ID":"${callid}","DELTA":19.983,"JITTER":${mediaInfo.jitter},"REPORT_TS":${new Date().getTime()/1000},"TL_BYTE":0,"SKEW":0.000,"TOTAL_PK":1512,"EXPECTED_PK":1512,"PACKET_LOSS":${mediaInfo.packetloss},"SEQ":0,"MAX_JITTER":0.010,"MAX_DELTA":20.024,"MAX_SKEW":0.172,"MEAN_JITTER":${mediaInfo.mean_jitter},"MIN_MOS":4.032, "MEAN_MOS":${mediaInfo.mean_mos}, "MOS":${mediaInfo.mos},"RFACTOR":80.200,"MIN_RFACTOR":80.200,"MEAN_RFACTOR":80.200,"SRC_IP":"${rcinfoRaw.srcIp}", "SRC_PORT":${rcinfoRaw.srcPort}, "DST_IP":"${rcinfoRaw.dstIp}","DST_PORT":${rcinfoRaw.dstPort},"SRC_MAC":"00-30-48-7E-5D-C6","DST_MAC":"00-12-80-D7-38-5E","OUT_ORDER":0,"SSRC_CHG":0,"CODEC_PT":9, "CLOCK":8000,"CODEC_NAME":"G722","DIR":0,"REPORT_NAME":"${rcinfoRaw.srcIp}:${rcinfoRaw.srcPort}","PARTY":${mediaInfo.direction},"TYPE":"PERIODIC"}`
 
     return hepJs.encapsulate(rawShortReport, rcinfoRaw)
 }
@@ -371,8 +371,6 @@ hepModule.generateFinalReport = function (callid, rcinfo, mediaInfo) {
     let datenow = new Date().getTime()
     rcinfoRaw.time_sec = Math.floor(datenow / 1000)
     rcinfoRaw.time_usec = (datenow - (rcinfoRaw.time_sec*1000))*1000
-    console.log(mediaInfo)
-    /* TODO: change format to use `` */
     let rawFinalReport = `{"CORRELATION_ID":"${callid}", "RTP_SIP_CALL_ID":"${callid}","MIN_MOS":4.409, "MIN_RFACTOR":93.200, "MIN_SKEW": 0, "MIN_JITTER":0, "MAX_MOS": 4.409, "MAX_RFACTOR":93.200, "MAX_SKEW":0, "MAX_JITTER":4.409, "MEAN_MOS":${mediaInfo.mean_mos}, "MEAN_RFACTOR":${mediaInfo.mean_rfactor}, "MEAN_JITTER":${mediaInfo.mean_jitter}, "TOTAL_PACKET_LOSS":${mediaInfo.packetloss},"TOTAL_PACKETS":5000,"DIR":${mediaInfo.direction},"REPORT_NAME":"${rcinfoRaw.srcIp}","PARTY":${mediaInfo.direction}, "ONE_WAY_RTP": 0, "TYPE":"FINAL"}`
 
     return hepJs.encapsulate(rawFinalReport, rcinfoRaw)
@@ -601,9 +599,9 @@ sessionModule.update = async function (moment) {
                 let jitter = utils.getRandomFloat(session.jitter_range[0], session.jitter_range[1])
                 let packetloss = utils.getRandomInt(session.packetloss_range[0], session.packetloss_range[1])
                 session.mediaInfo.mos = mos
-                session.mediaInfo.mean_mos = (session.mediaInfo.mean_mos + mos) / 2
+                session.mediaInfo.mean_mos = parseFloat(parseFloat((session.mediaInfo.mean_mos + mos) / 2).toFixed(3))
                 session.mediaInfo.jitter = jitter
-                session.mediaInfo.mean_jitter = (session.mediaInfo.mean_jitter + jitter) / 2
+                session.mediaInfo.mean_jitter = parseFloat(parseFloat((session.mediaInfo.mean_jitter + jitter) / 2).toFixed(3)) 
                 session.mediaInfo.packetloss += packetloss
                 session.mediaInfo.direction = 0
                 let media = hepModule.generatePeriodicReport(session.callid, session.inMedia, session.mediaInfo)
@@ -619,9 +617,9 @@ sessionModule.update = async function (moment) {
                     let jitter = utils.getRandomFloat(session.jitter_range[0], session.jitter_range[1])
                     let packetloss = utils.getRandomInt(session.packetloss_range[0], session.packetloss_range[1])
                     session.mediaInfo.mos = mos
-                    session.mediaInfo.mean_mos = (session.mediaInfo.mean_mos + mos) / 2
+                    session.mediaInfo.mean_mos = parseFloat(parseFloat((session.mediaInfo.mean_mos + mos) / 2).toFixed(3))
                     session.mediaInfo.jitter = jitter
-                    session.mediaInfo.mean_jitter = (session.mediaInfo.mean_jitter + jitter) / 2
+                    session.mediaInfo.mean_jitter = parseFloat(parseFloat((session.mediaInfo.mean_jitter + jitter) / 2).toFixed(3)) 
                     session.mediaInfo.packetloss += packetloss
                 }
                 session.mediaInfo.direction = 0
