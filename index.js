@@ -59,7 +59,7 @@ utils.generateRandomBranch = function () {
  * @returns {integer} Random Integer between min and max
  */
 utils.getRandomInt = function (min, max) {
-    return Number.parseInt(Math.floor(Math.random() * (max - min + 1)) + min)
+    return parseInt(Math.floor(Math.random() * (max - min + 1)) + min)
 }
 
 /**
@@ -69,7 +69,7 @@ utils.getRandomInt = function (min, max) {
  * @returns {float} Random Float between min and max
  */
 utils.getRandomFloat = function (min, max) {
-    return Number.parseFloat(Math.random() * (max - min) + min).toFixed(3)
+    return parseFloat(parseFloat(Math.random() * (max - min) + min).toFixed(3))
 }
 
 /**
@@ -371,8 +371,9 @@ hepModule.generateFinalReport = function (callid, rcinfo, mediaInfo) {
     let datenow = new Date().getTime()
     rcinfoRaw.time_sec = Math.floor(datenow / 1000)
     rcinfoRaw.time_usec = (datenow - (rcinfoRaw.time_sec*1000))*1000
+    console.log(mediaInfo)
     /* TODO: change format to use `` */
-    let rawFinalReport = '{"CORRELATION_ID":"' + callid + '", "RTP_SIP_CALL_ID":"' + callid + '","MIN_MOS":4.409, "MIN_RFACTOR":93.200, "MIN_SKEW": 0, "MIN_JITTER":0, "MAX_MOS": 4.409, "MAX_RFACTOR":93.200, "MAX_SKEW":0, "MAX_JITTER":4.409, "MEAN_MOS":' + mediaInfo.mean_mos + ', "MEAN_RFACTOR":' + mediaInfo.mean_rfactor + ', "MEAN_JITTER":' + mediaInfo.mean_jitter + ', "TOTAL_PACKET_LOSS":' + mediaInfo.packetloss + ',"TOTAL_PACKETS":5000,"DIR": ' + mediaInfo.direction + ',"REPORT_NAME":"' + rcinfoRaw.srcIp + '","PARTY": ' + mediaInfo.direction + ', "ONE_WAY_RTP": 0, "TYPE":"FINAL"}'
+    let rawFinalReport = `{"CORRELATION_ID":"${callid}", "RTP_SIP_CALL_ID":"${callid}","MIN_MOS":4.409, "MIN_RFACTOR":93.200, "MIN_SKEW": 0, "MIN_JITTER":0, "MAX_MOS": 4.409, "MAX_RFACTOR":93.200, "MAX_SKEW":0, "MAX_JITTER":4.409, "MEAN_MOS":${mediaInfo.mean_mos}, "MEAN_RFACTOR":${mediaInfo.mean_rfactor}, "MEAN_JITTER":${mediaInfo.mean_jitter}, "TOTAL_PACKET_LOSS":${mediaInfo.packetloss},"TOTAL_PACKETS":5000,"DIR":${mediaInfo.direction},"REPORT_NAME":"${rcinfoRaw.srcIp}","PARTY":${mediaInfo.direction}, "ONE_WAY_RTP": 0, "TYPE":"FINAL"}`
 
     return hepJs.encapsulate(rawFinalReport, rcinfoRaw)
 }
@@ -549,7 +550,7 @@ sessionModule.createSession = function (scenario, fromNumber, toNumber, correlat
         name: scenario.name,
         state: '0',
         callflow: scenario.callflow,
-        mediaInfo: {mos: parseFloat(0.0), mean_mos: parseFloat(0.0), jitter: parseFloat(0.0), mean_jitter: parseFloat(0.0), packetloss: parseInt(0), mean_rfactor: parseFloat(0.0)}
+        mediaInfo: {mos: parseFloat(0.0), mean_mos: parseFloat(4.000), jitter: parseFloat(0.0), mean_jitter: parseFloat(1.0), packetloss: parseInt(0), mean_rfactor: parseFloat(80.0)}
     }
     if (correlation_id) {
         session.correlation_id = correlation_id
@@ -595,10 +596,13 @@ sessionModule.update = async function (moment) {
             session.duration = moment - session.start
             if (duration > 30000 && session.duration < session.target_duration && session.target_duration > 30000) {
                 /* TODO: Calculate MOS, RFACTOR, Jitter, Packetloss in mediaInfo */
+                /* TODO: RFactor Calculation */
                 let mos = utils.getRandomFloat(session.mos_range[0], session.mos_range[1])
                 let jitter = utils.getRandomFloat(session.jitter_range[0], session.jitter_range[1])
                 let packetloss = utils.getRandomInt(session.packetloss_range[0], session.packetloss_range[1])
+                session.mediaInfo.mos = mos
                 session.mediaInfo.mean_mos = (session.mediaInfo.mean_mos + mos) / 2
+                session.mediaInfo.jitter = jitter
                 session.mediaInfo.mean_jitter = (session.mediaInfo.mean_jitter + jitter) / 2
                 session.mediaInfo.packetloss += packetloss
                 session.mediaInfo.direction = 0
@@ -614,7 +618,9 @@ sessionModule.update = async function (moment) {
                     let mos = utils.getRandomFloat(session.mos_range[0], session.mos_range[1])
                     let jitter = utils.getRandomFloat(session.jitter_range[0], session.jitter_range[1])
                     let packetloss = utils.getRandomInt(session.packetloss_range[0], session.packetloss_range[1])
+                    session.mediaInfo.mos = mos
                     session.mediaInfo.mean_mos = (session.mediaInfo.mean_mos + mos) / 2
+                    session.mediaInfo.jitter = jitter
                     session.mediaInfo.mean_jitter = (session.mediaInfo.mean_jitter + jitter) / 2
                     session.mediaInfo.packetloss += packetloss
                 }
