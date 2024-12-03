@@ -616,7 +616,7 @@ sessionModule.update = async function (moment) {
             session.reportingStart = moment
             continue
         } else if (sessionModule.callFlows[session.callflow][session.state] == '200OKACK') {
-            let ack200 = hepModule.generate200OKAck(session.from_user, session.to_user, session.callid, session.outDirection)
+            let ack200 = hepModule.generate200OKAck(session.seq, session.from_user, session.to_user, session.callid, session.outDirection)
             await senderModule.send(ack200)
             session.state++
             continue
