@@ -663,7 +663,7 @@ sessionModule.update = async function (moment) {
                     session.mediaInfo.mean_jitter = parseFloat(parseFloat((session.mediaInfo.mean_jitter + jitter) / 2).toFixed(3)) 
                     session.mediaInfo.packetloss += packetloss
                 }
-                session.lastReport = session.reportingStart / 1000
+                session.lastReport = session.reportingStart / 1000 || Date.now() / 1000
                 session.mediaInfo.rtpstart = session.start
                 session.mediaInfo.direction = 0
                 let final = hepModule.generateFinalReport(session.callid, session.inMedia, session.mediaInfo)
