@@ -87,10 +87,11 @@ utils.getRandomPhoneNumber = function () {
 const senderModule = {}
 
 senderModule.receiver = process.env.HEP_ADDRESS || '127.0.0.1'
-senderModule.port = process.env.PORT || 9060
+senderModule.port = parseInt(process.env.PORT) || 9060
 senderModule.socket = null
 
 senderModule.establishConnection = async function () {
+    console.log(senderModule.receiver, senderModule.port)
     senderModule.socket = dgram.createSocket('udp4')
     senderModule.socket.connect(senderModule.port, senderModule.receiver)
     senderModule.socket.on('error', (err) => {
