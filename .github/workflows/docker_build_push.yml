@@ -43,5 +43,5 @@ jobs:
                 context: "."
                 push: true
                 tags: |
-                    ghcr.io/sipcapture/expsuehep:latest
-                    ghcr.io/sipcapture/expsuehep:${{ github.event.inputs.TAG_NAME || github.event.release.tag_name }}
+                    ghcr.io/sipcapture/hepsim:latest
+                    ghcr.io/sipcapture/hepsim:${{ github.event.inputs.TAG_NAME || github.event.release.tag_name }}
