@@ -54,5 +54,5 @@ jobs:
                 context: "."
                 push: true
                 tags: |
-                    qxip/expsuehep:latest
-                    qxip/expsuehep:${{ github.event.inputs.TAG_NAME || github.event.release.tag_name }}
+                    sipcapture/expsuehep:latest
+                    sipcapture/expsuehep:${{ github.event.inputs.TAG_NAME || github.event.release.tag_name }}
