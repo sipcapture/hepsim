@@ -1,4 +1,4 @@
-# expsuehep
+# hepsim
 Simulate varying phone calls by sending HEP for demos and statistics
 
 ### Objective
@@ -9,8 +9,6 @@ It generates HEP and sends it based on defined callflows.
 ### Current Caveats
 * Only UDP
 * Only simple Flow
-* Not yet repeating
-* No media reports yet
 
 ### Usage
 
