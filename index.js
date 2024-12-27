@@ -1,14 +1,17 @@
 /*
-* expsue HEP (I spit HEP) is a simulator for calls.
+* HEPsim (HEP simulator) is a simulator for calls to generate metrics and 
+* Semi-realistic SIP flows for demonstration purposes
 * AGPLv3, 2024 - Jachen Duschletta
 */
 /*
 * Imports
 */
 
-import hepJs, * as HEP from 'hep-js'
+import hepJs from 'hep-js'
 import * as fs from 'node:fs'
 import * as dgram from 'node:dgram'
+import { resolve } from 'node:path'
+
 
 /*
 * Globals
@@ -88,28 +91,85 @@ const senderModule = {}
 
 senderModule.receiver = process.env.HEP_ADDRESS || '127.0.0.1'
 senderModule.port = parseInt(process.env.PORT) || 9060
+senderModule.transport = process.env.TRANSPORT || 'udp4'
 senderModule.socket = null
+senderModule.sendData = ()=>{}
 
 senderModule.establishConnection = async function () {
-    console.log(senderModule.receiver, senderModule.port)
-    senderModule.socket = dgram.createSocket('udp4')
-    senderModule.socket.connect(senderModule.port, senderModule.receiver)
-    senderModule.socket.on('error', (err) => {
-        console.log('Error sending HEP Packet')
-        console.log(err)
-    })
-
-    senderModule.socket.on('close', () => {
-        console.log('Connection to HEP Server closed')
-        senderModule.socket = null
-    })
-
-    return new Promise((resolve, reject) => {
-        senderModule.socket.on('connect', () => {
-            console.log('Connected to HEP Server', senderModule.receiver, senderModule.port)
-            resolve()
+    if (senderModule.transport === 'udp4') {
+        console.log(senderModule.receiver, senderModule.port)
+        senderModule.socket = dgram.createSocket('udp4')
+        senderModule.socket.connect(senderModule.port, senderModule.receiver)
+        senderModule.socket.on('error', (err) => {
+            console.log('Error sending HEP Packet')
+            console.log(err)
         })
-    })
+
+        senderModule.socket.on('close', () => {
+            console.log('Connection to HEP Server closed')
+            senderModule.socket = null
+        })
+
+        senderModule.sendData = function (hepPacket) {
+            return new Promise((resolve, reject) => {
+                senderModule.socket.send(hepPacket, (err) => {
+                    if (err) {
+                        console.log('Error sending HEP Packet')
+                        console.log(err)
+                        reject(err)
+                    }
+                    resolve()
+                })
+            })
+        }
+
+        return new Promise((resolve, reject) => {
+            senderModule.socket.on('connect', () => {
+                console.log('Connected to HEP Server', senderModule.receiver, senderModule.port)
+                resolve()
+            })
+        })
+    } else if (senderModule.transport === 'tcp') {
+        console.log(`Opening TCP connection to ${senderModule.receiver}:${senderModule.port}`)
+        senderModule.socket = await Bun.connect({
+            hostname: senderModule.receiver,
+            port: senderModule.port,
+    
+            socket: {
+                data (data) {
+                    console.log('Received Data')
+                    console.log(data)
+                },
+                open (socket) {
+                    resolve(socket)
+                },
+                drain (socket) {
+                    console.log('Draining')
+                },
+                connectError(_, error) {
+                    console.log('Connection Error')
+                    console.log(error)
+                    reject()
+                }, // connection failed
+                end() {
+                    console.log('Connection to HEP Server closed')
+                    senderModule.socket = null
+                }, // connection closed by server
+                timeout() {
+                    console.log('Connection to HEP Server timed-out')
+                    senderModule.socket = null
+                }, // connection timed out
+            },
+        })
+
+        senderModule.sendData = function (hepPacket) {
+            return senderModule.socket.write(hepPacket)
+        }
+        
+        return senderModule.socket
+    } else {
+        console.log('Invalid Transport')
+    }
 }
 
 senderModule.send = async function (hepPacket) {
@@ -119,17 +179,7 @@ senderModule.send = async function (hepPacket) {
         await senderModule.establishConnection()
         await new Promise((resolve) => setTimeout(resolve, 100))
     }
-
-    return new Promise((resolve, reject) => {
-        senderModule.socket.send(hepPacket, (err) => {
-            if (err) {
-                console.log('Error sending HEP Packet')
-                console.log(err)
-                reject(err)
-            }
-            resolve()
-        })
-    })
+    return senderModule.sendData(hepPacket)
 }
 
 /*
