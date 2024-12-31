@@ -131,39 +131,45 @@ senderModule.establishConnection = async function () {
         })
     } else if (senderModule.transport === 'tcp') {
         console.log(`Opening TCP connection to ${senderModule.receiver}:${senderModule.port}`)
-        senderModule.socket = await Bun.connect({
-            hostname: senderModule.receiver,
-            port: senderModule.port,
+        try {
+            senderModule.socket = await Bun.connect({
+                hostname: senderModule.receiver,
+                port: senderModule.port,
+        
+                socket: {
+                    data (data) {
+                        console.log('Received Data')
+                        console.log(data)
+                    },
+                    open (socket) {
+                        console.log('Connection to HEP Server opened')
+                    },
+                    drain (socket) {
+                        console.log('Draining')
+                    },
+                    connectError(_, error) {
+                        console.log('Connection Error')
+                        console.log(error)
+                        reject()
+                    }, // connection failed
+                    end() {
+                        console.log('Connection to HEP Server closed')
+                        senderModule.socket = null
+                    }, // connection closed by server
+                    timeout() {
+                        console.log('Connection to HEP Server timed-out')
+                        senderModule.socket = null
+                    }, // connection timed out
+                },
+            })
     
-            socket: {
-                data (data) {
-                    console.log('Received Data')
-                    console.log(data)
-                },
-                open (socket) {
-                    resolve(socket)
-                },
-                drain (socket) {
-                    console.log('Draining')
-                },
-                connectError(_, error) {
-                    console.log('Connection Error')
-                    console.log(error)
-                    reject()
-                }, // connection failed
-                end() {
-                    console.log('Connection to HEP Server closed')
-                    senderModule.socket = null
-                }, // connection closed by server
-                timeout() {
-                    console.log('Connection to HEP Server timed-out')
-                    senderModule.socket = null
-                }, // connection timed out
-            },
-        })
-
-        senderModule.sendData = function (hepPacket) {
-            return senderModule.socket.write(hepPacket)
+            senderModule.sendData = function (hepPacket) {
+                return senderModule.socket.write(hepPacket)
+            }
+            
+        } catch (error) {
+            console.log('Error connecting to HEP Server')
+            console.log(error)
         }
         
         return senderModule.socket
