@@ -196,9 +196,6 @@ const hepModule = {}
 
 /**
  * TODO:
- * Add 407 for Auth
- * Add InviteAuth
- * Add 100 Trying
  * Add 180 Ringing
  * Add 183 Session Progress
  * Add SRD controls
@@ -280,7 +277,7 @@ hepModule.generateInvite = function (seq, from, to, callid, rcinfo, viaInfoArray
     inviteRaw.push('Allow: INVITE, ACK, OPTIONS, CANCEL, BYE, SUBSCRIBE, NOTIFY, INFO, REFER, UPDATE, MESSAGE\r\n')
     inviteRaw.push('Content-Type: application/sdp\r\n')
     inviteRaw.push('Accept: application/sdp, application/dtmf-relay\r\n')
-    inviteRaw.push('User-Agent: hepsim connector\r\n')
+    inviteRaw.push('User-Agent: Grandstream GXP2200 1.0.3.27\r\n')
     inviteRaw.push('Content-Length: 313\r\n')
     inviteRaw.push('\r\n')
     inviteRaw.push('v=0\r\n')
@@ -325,7 +322,7 @@ hepModule.generate407 = function (seq, from, to, callid, rcinfo) {
     raw407.push('To: <sip:' + to + '@' + rcinfo.dstIp + ':' + rcinfo.dstPort + '>;tag=' + utils.generateRandomString(8) + '\r\n')
     raw407.push('Call-ID: ' + callid + '\r\n')
     raw407.push('CSeq: ' + seq + ' INVITE\r\n')
-    raw407.push('User-Agent: hepsim connector\r\n')
+    raw407.push('User-Agent: Grandstream GXP2200 1.0.3.27\r\n')
     raw407.push('Accept: application/sdp\r\n')
     raw407.push('Allow: INVITE, ACK, BYE, CANCEL, OPTIONS, MESSAGE, INFO, UPDATE, REGISTER, REFER, NOTIFY, PUBLISH, SUBSCRIBE\r\n')
     raw407.push('Supported: timer, path, replaces\r\n')
@@ -395,7 +392,7 @@ hepModule.generateInviteAuth = function (seq, from, to, callid, rcinfo, viaInfoA
     inviteRaw.push('Content-Type: application/sdp\r\n')
     inviteRaw.push('Accept: application/sdp, application/dtmf-relay\r\n')
     inviteRaw.push('Proxy-Authorization: Digest username="' + from + '",realm="sip.botauro.com",nonce="' + utils.generateRandomString(32) + '",uri="sip:' + to + '@' + rcinfo.dstIp + ';transport=TCP",response="' + utils.generateRandomString(32) + '",cnonce="' + utils.generateRandomString(32) + '",nc=00000001,qop=auth,algorithm=MD5"\r\n')
-    inviteRaw.push('User-Agent: hepsim connector\r\n')
+    inviteRaw.push('User-Agent: Grandstream GXP2200 1.0.3.27\r\n')
     inviteRaw.push('Content-Length: 313\r\n')
     inviteRaw.push('\r\n')
     inviteRaw.push('v=0\r\n')
@@ -439,11 +436,34 @@ hepModule.generate100Trying = function (seq, from, to, callid, rcinfo) {
     raw100Trying.push('To: <sip:' + to + '@' + rcinfo.dstIp + ':' + rcinfo.dstPort + '>\r\n')
     raw100Trying.push('Call-ID: ' + callid + '\r\n')
     raw100Trying.push('CSeq: ' + seq + ' INVITE\r\n')
-    raw100Trying.push('User-Agent: hepsim connector\r\n')
+    raw100Trying.push('User-Agent: Grandstream GXP2200 1.0.3.27\r\n')
     raw100Trying.push('Content-Length: 0\r\n')
     raw100Trying.push('\r\n\r\n')
 
     return hepJs.encapsulate(raw100Trying.join(''), rcinfo)
+}
+
+hepModule.generate180Ringing = function (seq, from, to, callid, rcinfo) {
+    let datenow = new Date().getTime()
+    rcinfo.time_sec = Math.floor(datenow / 1000)
+    rcinfo.time_usec = (datenow - (rcinfo.time_sec*1000))*1000
+
+    let raw180Ringing = []
+    raw180Ringing.push('SIP/2.0 180 Ringing\r\n')
+    raw180Ringing.push('Via: SIP/2.0/TCP ' + rcinfo.dstIp + ';branch=' + utils.generateRandomBranch() + '\r\n')
+    raw180Ringing.push('From: <sip:' + from + '@' + rcinfo.srcIp + '>;tag=' + utils.generateRandomString(8) + '\r\n')
+    raw180Ringing.push('To: <sip:' + to + '@' + rcinfo.dstIp + ':' + rcinfo.dstPort + ';transport=tcp;received=' + rcinfo.srcIp + ':' + rcinfo.srcPort + '>;tag=' + utils.generateRandomString(8) + '\r\n')
+    raw180Ringing.push('Call-ID: ' + callid + '\r\n')
+    raw180Ringing.push('CSeq: ' + seq + ' INVITE\r\n')
+    raw180Ringing.push('Contact: <sip:250@192.168.188.26:49133;transport=tcp>\r\n')
+    raw180Ringing.push('Supported: replaces, path, timer, eventlist\r\n')
+    raw180Ringing.push('User-Agent: Grandstream GXP2200 1.0.3.27\r\n')
+    raw180Ringing.push('Allow-Events: talk, hold\r\n')
+    raw180Ringing.push('Allow: INVITE, ACK, OPTIONS, CANCEL, BYE, SUBSCRIBE, NOTIFY, INFO, REFER, UPDATE, MESSAGE\r\n')
+    raw180Ringing.push('Content-Length: 0\r\n')
+    raw180Ringing.push('\r\n\r\n')
+
+    return hepJs.encapsulate(raw180Ringing.join(''), rcinfo)
 }
 
 /**
@@ -467,7 +487,7 @@ hepModule.generate200OKInvite = function (seq, from, to, callid, rcinfo) {
     raw200OK.push('To: <sip:' + to + '@' + rcinfo.dstIp + '>;tag=as6db2fc4d\r\n')
     raw200OK.push('Call-ID: ' + callid + '\r\n')
     raw200OK.push('CSeq: ' + seq + ' INVITE\r\n')
-    raw200OK.push('User-Agent: HEPServer\r\n')
+    raw200OK.push('User-Agent: SBC\r\n')
     raw200OK.push('Allow: INVITE, ACK, CANCEL, OPTIONS, BYE, REFER, SUBSCRIBE, NOTIFY\r\n')
     raw200OK.push('Supported: replaces\r\n')
     raw200OK.push('Contact: <sip:' + to + '@' + rcinfo.dstIp + ':' + rcinfo.dstPort + '>\r\n')
@@ -639,7 +659,7 @@ hepModule.generateBye = function (from, to, callid, rcinfo) {
     rawBye.push('Contact: <sip:' + from + '@' + rcinfo.srcIp + ':' + rcinfo.srcPort + ';user=phone>\r\n')
     rawBye.push('Max-Forwards: 70\r\n')
     rawBye.push('Supported: replaces, path, timer, eventlist\r\n')
-    rawBye.push('User-Agent: hepgenjs\r\n')
+    rawBye.push('User-Agent: Grandstream GXP2200 1.0.3.27\r\n')
     rawBye.push('Allow: INVITE, ACK, OPTIONS, CANCEL, BYE, SUBSCRIBE, NOTIFY, INFO, REFER, UPDATE, MESSAGE\r\n')
     rawBye.push('Content-Length: 0\r\n')
     rawBye.push('\r\n\r\n')
