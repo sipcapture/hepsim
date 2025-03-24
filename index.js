@@ -162,11 +162,11 @@ senderModule.establishConnection = async function () {
                     }, // connection timed out
                 },
             })
-    
+
             senderModule.sendData = function (hepPacket) {
                 return senderModule.socket.write(hepPacket)
             }
-            
+
         } catch (error) {
             console.log('Error connecting to HEP Server')
             console.log(error)
@@ -193,6 +193,15 @@ senderModule.send = async function (hepPacket) {
 */
 
 const hepModule = {}
+
+/**
+ * TODO:
+ * Add 180 Ringing
+ * Add 183 Session Progress
+ * Add SRD controls
+ * Add SDD controls
+ * Finish Registration Flow
+ */
 
 /**
  * @typedef RCINFO
@@ -268,6 +277,7 @@ hepModule.generateInvite = function (seq, from, to, callid, rcinfo, viaInfoArray
     inviteRaw.push('Allow: INVITE, ACK, OPTIONS, CANCEL, BYE, SUBSCRIBE, NOTIFY, INFO, REFER, UPDATE, MESSAGE\r\n')
     inviteRaw.push('Content-Type: application/sdp\r\n')
     inviteRaw.push('Accept: application/sdp, application/dtmf-relay\r\n')
+    inviteRaw.push('User-Agent: Grandstream GXP2200 1.0.3.27\r\n')
     inviteRaw.push('Content-Length: 313\r\n')
     inviteRaw.push('\r\n')
     inviteRaw.push('v=0\r\n')
@@ -291,6 +301,172 @@ hepModule.generateInvite = function (seq, from, to, callid, rcinfo, viaInfoArray
 }
 
 /**
+ * Generate a 407 Proxy Authentication Required
+ * @param {string} seq
+ * @param {string} from
+ * @param {string} to
+ * @param {string} callid
+ * @param {RCINFO} rcinfo
+ * @returns {string} 407 Proxy Authentication Required payload
+ */
+hepModule.generate407 = function (seq, from, to, callid, rcinfo) {
+    let datenow = new Date().getTime()
+    rcinfo.time_sec = Math.floor(datenow / 1000)
+    rcinfo.time_usec = (datenow - (rcinfo.time_sec*1000))*1000
+
+    let raw407 = []
+
+    raw407.push('SIP/2.0 407 Proxy Authentication Required\r\n')
+    raw407.push('Via: SIP/2.0/TCP ' + rcinfo.dstIp + ':' + rcinfo.dstPort + ';branch=' + utils.generateRandomBranch() + '\r\n')
+    raw407.push('From: <sip:' + from + '@' + rcinfo.srcIp + ':' + rcinfo.srcPort + '>;tag=' + utils.generateRandomString(8) + '\r\n')
+    raw407.push('To: <sip:' + to + '@' + rcinfo.dstIp + ':' + rcinfo.dstPort + '>;tag=' + utils.generateRandomString(8) + '\r\n')
+    raw407.push('Call-ID: ' + callid + '\r\n')
+    raw407.push('CSeq: ' + seq + ' INVITE\r\n')
+    raw407.push('User-Agent: Grandstream GXP2200 1.0.3.27\r\n')
+    raw407.push('Accept: application/sdp\r\n')
+    raw407.push('Allow: INVITE, ACK, BYE, CANCEL, OPTIONS, MESSAGE, INFO, UPDATE, REGISTER, REFER, NOTIFY, PUBLISH, SUBSCRIBE\r\n')
+    raw407.push('Supported: timer, path, replaces\r\n')
+    raw407.push('Allow-Events: talk, hold, conference, presence, as-feature-event, dialog, line-seize, call-info, sla, include-session-description, presence.winfo, message-summary, refer\r\n')
+    raw407.push('Proxy-Authenticate: Digest realm="hepsim", nonce="' + utils.generateRandomString(32) + '", algorithm=MD5, qop="auth"\r\n')
+    raw407.push('Content-Length: 0\r\n')
+    raw407.push('\r\n\r\n')
+
+    return hepJs.encapsulate(raw407.join(''), rcinfo)
+
+}
+
+/**
+ * Generate an Ack for a 407 Proxy Authentication Required
+ * @param {string} seq 
+ * @param {string} from 
+ * @param {string} to 
+ * @param {string} callid 
+ * @param {RCINFO} rcinfo 
+ * @returns 
+ */
+hepModule.generateAck407 = function (seq, from, to, callid, rcinfo) {
+    let datenow = new Date().getTime()
+    rcinfo.time_sec = Math.floor(datenow / 1000)
+    rcinfo.time_usec = (datenow - (rcinfo.time_sec*1000))*1000
+
+    let rawAck407 = []
+    rawAck407.push('ACK sip:' + to + '@' + rcinfo.dstIp + ';transport=TCP SIP/2.0')
+    rawAck407.push('Via: SIP/2.0/TCP ' + rcinfo.srcIp + ':' + rcinfo.srcPort + ';branch=' + utils.generateRandomBranch() + ';rport')
+    rawAck407.push('Max-Forwards: 70')
+    rawAck407.push('To: <sip:' + to + '@' + rcinfo.dstIp + '>;tag=' + utils.generateRandomString(8))
+    rawAck407.push('From: <sip:' + from + '@' + rcinfo.srcIp + ';transport=TCP>;tag=' + utils.generateRandomString(8))
+    rawAck407.push('Call-ID: ' + callid)
+    rawAck407.push('CSeq: ' + seq + ' ACK')
+    rawAck407.push('Content-Length: 0')
+    rawAck407.push('\r\n\r\n')
+
+    return hepJs.encapsulate(rawAck407.join(''), rcinfo)
+}
+
+/**
+ * Generate a generic SIP Invite with Auth
+ * @param {string} seq 
+ * @param {string} from 
+ * @param {string} to 
+ * @param {string} callid 
+ * @param {RCINFO} rcinfo 
+ * @param {VIA} viaInfoArray 
+ * @returns {string} Invite payload
+ */
+hepModule.generateInviteAuth = function (seq, from, to, callid, rcinfo, viaInfoArray) {
+    let datenow = new Date().getTime()
+    rcinfo.time_sec = Math.floor(datenow / 1000)
+    rcinfo.time_usec = (datenow - (rcinfo.time_sec*1000)) * 1000
+    let inviteRaw = []
+    inviteRaw.push('INVITE sip:' + to + '@' + rcinfo.dstIp + ':' + rcinfo.dstPort + ' SIP/2.0\r\n')
+    /* TODO Only add via when it's necessary */
+    inviteRaw.push('Via: SIP/2.0/UDP ' + rcinfo.srcIp + ':' + rcinfo.srcPort + ';branch=' + utils.generateRandomBranch() + '\r\n')
+    inviteRaw.push('From: <sip:' + from + '@' + rcinfo.srcIp + ':' + rcinfo.srcPort + '>;tag=' + utils.generateRandomString(8) + '\r\n')
+    inviteRaw.push('To: <sip:' + to + '@' + rcinfo.dstIp + ':' + rcinfo.dstPort + '>\r\n')
+    inviteRaw.push('Call-ID: ' + callid + '\r\n')
+    inviteRaw.push('CSeq: ' + seq + ' INVITE\r\n')
+    inviteRaw.push('Max-Forwards: 70 \r\n')
+    if (rcinfo?.correlation_id) inviteRaw.push('X-CID: ' + rcinfo.correlation_id + '\r\n')
+    inviteRaw.push('Supported: replaces, path, timer, eventlist\r\n')
+    inviteRaw.push('Allow: INVITE, ACK, OPTIONS, CANCEL, BYE, SUBSCRIBE, NOTIFY, INFO, REFER, UPDATE, MESSAGE\r\n')
+    inviteRaw.push('Content-Type: application/sdp\r\n')
+    inviteRaw.push('Accept: application/sdp, application/dtmf-relay\r\n')
+    inviteRaw.push('Proxy-Authorization: Digest username="' + from + '",realm="sip.botauro.com",nonce="' + utils.generateRandomString(32) + '",uri="sip:' + to + '@' + rcinfo.dstIp + ';transport=TCP",response="' + utils.generateRandomString(32) + '",cnonce="' + utils.generateRandomString(32) + '",nc=00000001,qop=auth,algorithm=MD5"\r\n')
+    inviteRaw.push('User-Agent: Grandstream GXP2200 1.0.3.27\r\n')
+    inviteRaw.push('Content-Length: 313\r\n')
+    inviteRaw.push('\r\n')
+    inviteRaw.push('v=0\r\n')
+    inviteRaw.push('o=' + from + ' 8000 8000 IN IP4 ' + rcinfo.srcIp + '\r\n')
+    inviteRaw.push('s=SIP Call\r\n')
+    inviteRaw.push('c=IN IP4 ' + rcinfo.srcIp + '\r\n')
+    inviteRaw.push('t=0 0\r\n')
+    inviteRaw.push('m=audio 5004 RTP/AVP 0 8 9 18 101\r\n')
+    inviteRaw.push('a=sendrecv\r\n')
+    inviteRaw.push('a=rtpmap:0 PCMU/8000\r\n')
+    inviteRaw.push('a=ptime:20\r\n')
+    inviteRaw.push('a=rtpmap:8 PCMA/8000\r\n')
+    inviteRaw.push('a=rtpmap:9 G722/8000\r\n')
+    inviteRaw.push('a=rtpmap:18 G729/8000\r\n')
+    inviteRaw.push('a=fmtp:18 annexb=no\r\n')
+    inviteRaw.push('a=rtpmap:101 telephone-event/8000\r\n')
+    inviteRaw.push('a=fmtp:101 0-15\r\n')
+    inviteRaw.push('\r\n\r\n')
+
+    return hepJs.encapsulate(inviteRaw.join(''), rcinfo)
+}
+
+/**
+ * Generates a 100 Trying for a SIP Invite
+ * @param {string} seq 
+ * @param {string} from 
+ * @param {string} to 
+ * @param {string} callid 
+ * @param {RCINFO} rcinfo 
+ * @returns {string} 100 Trying payload
+ */
+hepModule.generate100Trying = function (seq, from, to, callid, rcinfo) {
+    let datenow = new Date().getTime()
+    rcinfo.time_sec = Math.floor(datenow / 1000)
+    rcinfo.time_usec = (datenow - (rcinfo.time_sec*1000))*1000
+
+    let raw100Trying = []
+    raw100Trying.push('SIP/2.0 100 Trying\r\n')
+    raw100Trying.push('Via: SIP/2.0/TCP ' + rcinfo.dstIp + ':' + rcinfo.dstPort + ';branch=' + utils.generateRandomBranch() + '\r\n')
+    raw100Trying.push('From: <sip' + from + '@' + rcinfo.srcIp + ':' + rcinfo.srcPort + '>;tag=' + utils.generateRandomString(8) + '\r\n')
+    raw100Trying.push('To: <sip:' + to + '@' + rcinfo.dstIp + ':' + rcinfo.dstPort + '>\r\n')
+    raw100Trying.push('Call-ID: ' + callid + '\r\n')
+    raw100Trying.push('CSeq: ' + seq + ' INVITE\r\n')
+    raw100Trying.push('User-Agent: Grandstream GXP2200 1.0.3.27\r\n')
+    raw100Trying.push('Content-Length: 0\r\n')
+    raw100Trying.push('\r\n\r\n')
+
+    return hepJs.encapsulate(raw100Trying.join(''), rcinfo)
+}
+
+hepModule.generate180Ringing = function (seq, from, to, callid, rcinfo) {
+    let datenow = new Date().getTime()
+    rcinfo.time_sec = Math.floor(datenow / 1000)
+    rcinfo.time_usec = (datenow - (rcinfo.time_sec*1000))*1000
+
+    let raw180Ringing = []
+    raw180Ringing.push('SIP/2.0 180 Ringing\r\n')
+    raw180Ringing.push('Via: SIP/2.0/TCP ' + rcinfo.dstIp + ';branch=' + utils.generateRandomBranch() + '\r\n')
+    raw180Ringing.push('From: <sip:' + from + '@' + rcinfo.srcIp + '>;tag=' + utils.generateRandomString(8) + '\r\n')
+    raw180Ringing.push('To: <sip:' + to + '@' + rcinfo.dstIp + ':' + rcinfo.dstPort + ';transport=tcp;received=' + rcinfo.srcIp + ':' + rcinfo.srcPort + '>;tag=' + utils.generateRandomString(8) + '\r\n')
+    raw180Ringing.push('Call-ID: ' + callid + '\r\n')
+    raw180Ringing.push('CSeq: ' + seq + ' INVITE\r\n')
+    raw180Ringing.push('Contact: <sip:250@192.168.188.26:49133;transport=tcp>\r\n')
+    raw180Ringing.push('Supported: replaces, path, timer, eventlist\r\n')
+    raw180Ringing.push('User-Agent: Grandstream GXP2200 1.0.3.27\r\n')
+    raw180Ringing.push('Allow-Events: talk, hold\r\n')
+    raw180Ringing.push('Allow: INVITE, ACK, OPTIONS, CANCEL, BYE, SUBSCRIBE, NOTIFY, INFO, REFER, UPDATE, MESSAGE\r\n')
+    raw180Ringing.push('Content-Length: 0\r\n')
+    raw180Ringing.push('\r\n\r\n')
+
+    return hepJs.encapsulate(raw180Ringing.join(''), rcinfo)
+}
+
+/**
  * Generate a 200 OK for a SIP Invite
  * @param {string} seq 
  * @param {string} from 
@@ -311,7 +487,7 @@ hepModule.generate200OKInvite = function (seq, from, to, callid, rcinfo) {
     raw200OK.push('To: <sip:' + to + '@' + rcinfo.dstIp + '>;tag=as6db2fc4d\r\n')
     raw200OK.push('Call-ID: ' + callid + '\r\n')
     raw200OK.push('CSeq: ' + seq + ' INVITE\r\n')
-    raw200OK.push('User-Agent: HEPServer\r\n')
+    raw200OK.push('User-Agent: SBC\r\n')
     raw200OK.push('Allow: INVITE, ACK, CANCEL, OPTIONS, BYE, REFER, SUBSCRIBE, NOTIFY\r\n')
     raw200OK.push('Supported: replaces\r\n')
     raw200OK.push('Contact: <sip:' + to + '@' + rcinfo.dstIp + ':' + rcinfo.dstPort + '>\r\n')
@@ -483,7 +659,7 @@ hepModule.generateBye = function (from, to, callid, rcinfo) {
     rawBye.push('Contact: <sip:' + from + '@' + rcinfo.srcIp + ':' + rcinfo.srcPort + ';user=phone>\r\n')
     rawBye.push('Max-Forwards: 70\r\n')
     rawBye.push('Supported: replaces, path, timer, eventlist\r\n')
-    rawBye.push('User-Agent: hepgenjs\r\n')
+    rawBye.push('User-Agent: Grandstream GXP2200 1.0.3.27\r\n')
     rawBye.push('Allow: INVITE, ACK, OPTIONS, CANCEL, BYE, SUBSCRIBE, NOTIFY, INFO, REFER, UPDATE, MESSAGE\r\n')
     rawBye.push('Content-Length: 0\r\n')
     rawBye.push('\r\n\r\n')
@@ -546,11 +722,11 @@ sessionModule.sessions = []
 sessionModule.scenarios = {}
 
 sessionModule.callFlows = {
-    'default': ['INVITE', '200OK', '200OKACK', 'MEDIA', 'BYE', '200BYE', 'END'],
-    'auth': ['INVITE', '407', 'INVITEAUTH', '200OK', '200OKACK', 'MEDIA', 'BYE', '200BYE', 'END'],
+    'default': ['INVITE', '100Trying', '200OK', '200OKACK', 'MEDIA', 'BYE', '200BYE', 'END'],
+    'auth': ['INVITE', '407', 'ACK407', 'INVITEAUTH', '200OK', '200OKACK', 'MEDIA', 'BYE', '200BYE', 'END'],
     'registration': ['REGISTER', '200OK', 'END'],
     'auth_register': ['REGISTER', '401', 'REGISTERAUTH', '200OK', 'END'],
-    'dtmf': ['INVITE', '200OK', 'DTMF', 'MEDIA', 'BYE', '200BYE', 'END'],
+    'dtmf': ['INVITE', '100Trying', '200OK', 'DTMF', 'MEDIA', 'BYE', '200BYE', 'END'],
     'timeout408': ['INVITE', '100', '200OK', '200OKACK', 'BYE', '408', 'END'],
 }
 
@@ -673,6 +849,11 @@ sessionModule.update = async function (moment) {
             let invite = hepModule.generateInvite(session.seq, session.from_user, session.to_user, session.callid, session.outDirection, via)
 
             await senderModule.send(invite)
+            session.state++
+            continue
+        } else if (sessionModule.callFlows[session.callflow][session.state] == '100Trying') {
+            let trying = hepModule.generate100Trying(session.seq, session.from_user, session.to_user, session.callid, session.inDirection)
+            await senderModule.send(trying)
             session.state++
             continue
         } else if (sessionModule.callFlows[session.callflow][session.state] == '200OK') {
