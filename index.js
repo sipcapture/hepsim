@@ -150,7 +150,6 @@ senderModule.establishConnection = async function () {
                     connectError(_, error) {
                         console.log('Connection Error')
                         console.log(error)
-                        reject()
                     }, // connection failed
                     end() {
                         console.log('Connection to HEP Server closed')
@@ -224,7 +223,7 @@ const hepModule = {}
  * @param {string} capturePass - HEP Password for Capture Server
  * @param {number} payload_type - 1 SIP, 'JSON' for RTCP and RTP reports
  * @param {string} correlation_id - Call ID or 'first leg callid', 'callid' for Reports or Logs
- * @param {number} proto_type - 17 SIP, 34 RTP Hangup, 35 RTP Periodic/Short, 36 RTCP Hangup, 37 RTCP short, 100 Log
+ * @param {number} proto_type - 1 SIP, 34 RTP Hangup, 35 RTP Periodic/Short, 36 RTCP Hangup, 37 RTCP short, 100 Log
  * @param {string} sourceIP 
  * @param {string} destinationIP 
  * @param {number} sourcePort 

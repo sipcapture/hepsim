@@ -7,7 +7,6 @@ Simulate a variety of calls to demonstrate use cases and statistics.
 It generates HEP and sends it based on defined callflows.
 
 ### Current Caveats
-* Only UDP
 * Only simple Flow
 
 ### Usage
