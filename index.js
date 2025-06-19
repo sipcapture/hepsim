@@ -10,7 +10,6 @@
 import hepJs from 'hep-js'
 import * as fs from 'node:fs'
 import * as dgram from 'node:dgram'
-import { resolve } from 'node:path'
 
 
 /*
@@ -94,16 +93,17 @@ senderModule.port = parseInt(process.env.PORT) || 9060
 senderModule.transport = process.env.TRANSPORT || 'udp4'
 senderModule.socket = null
 senderModule.sendData = ()=>{}
+senderModule.errorHandler = (err) => {
+    console.log('Error sending HEP Packet')
+    console.log(err)
+}
 
 senderModule.establishConnection = async function () {
     if (senderModule.transport === 'udp4') {
         console.log(senderModule.receiver, senderModule.port)
         senderModule.socket = dgram.createSocket('udp4')
         senderModule.socket.connect(senderModule.port, senderModule.receiver)
-        senderModule.socket.on('error', (err) => {
-            console.log('Error sending HEP Packet')
-            console.log(err)
-        })
+        senderModule.socket.on('error', senderModule.errorHandler)
 
         senderModule.socket.on('close', () => {
             console.log('Connection to HEP Server closed')
@@ -181,8 +181,14 @@ senderModule.send = async function (hepPacket) {
     if (debug) console.log('Sending HEP Packet')
     if (debug) console.log(hepPacket)
     if (!senderModule.socket) {
-        await senderModule.establishConnection()
-        await new Promise((resolve) => setTimeout(resolve, 100))
+        try {
+            await senderModule.establishConnection()
+        } catch (error) {
+            console.log('Error establishing connection to HEP Server')
+            console.log(error)
+            return
+        }
+        await Bun.sleep(100) // Wait for the connection to be established
     }
     return senderModule.sendData(hepPacket)
 }
@@ -765,7 +771,7 @@ sessionModule.initializeScenario = function (scenario) {
     }
     for (let i = 0; i < scenario.call.amount; i++) {
         if (scenario.call?.via) {
-            if (scenario.call.amount *2 > sessionModule.scenarios[scenario.name]) {
+            if (scenario.call.amount * 2 > sessionModule.scenarios[scenario.name]) {
                 /* Generate from and to user phone number */
                 let fromNumber = utils.getRandomPhoneNumber()
                 let toNumber = utils.getRandomPhoneNumber()
@@ -783,7 +789,7 @@ sessionModule.initializeScenario = function (scenario) {
                 break
             }
         } else {
-            if (scenario.call.amount *2 > sessionModule.scenarios[scenario.name]) {
+            if (scenario.call.amount > sessionModule.scenarios[scenario.name]) {
                 let session = sessionModule.createSession(scenario)
                 sessionModule.sessions.push(session)
                 sessionModule.scenarios[scenario.name]++
