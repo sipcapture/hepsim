@@ -12,6 +12,7 @@ import * as utils from './src/utils.js';
 import hepModule from './src/hepModule.js';
 import senderModule from './src/connectionManager.js';
 import infrastructureModule from './src/infrastructureModule.js';
+import simulationModule from './src/simulationModule.js';
 
 
 /*
@@ -20,22 +21,15 @@ import infrastructureModule from './src/infrastructureModule.js';
 const debug = process.env.DEBUG || false
 
 process.on('SIGINT', function() {
-    if (simulationModule.killed) {
-        process.exit()
+    if (simulationModule.simulationStopped) {
+        process.exit(0);
     }
-    console.log("Stopping Simulation")
-    simulationModule.killSimulation()
+    simulationModule.simulationStop();
 })
 
 
 /**
- * @typedef SCENARIO
- * @type {{name: string, call: {from: string, via: string, to: string, duration: Number[], amount: number, mos: Number[], jitter: Number[], packetloss: Number[]}}}
- */
-
-/**
- * @typedef SESSION
- * @type {{callid: string, seq: number, duration: number, via: string, from_user: string, from_ip: string, to_user: string, to_ip: string, target_duration: number, mos_range: number[], jitter_range: number[], packetloss_range: number[], state: string, start: number, callflow: string, mediaInfo: MEDIAINFO}}
+ * @typedef {{callState: string, location: number, callinfo: {callid: string, from: string , to: string}, mediaInfo: {mos: float, mean_mos: float, jitter: float, mean_jitter: float, packetloss: integer, mean_rfactor: float, direction: number}, locations: string[]}} SessionState
  */
 
 /*
@@ -140,9 +134,9 @@ sessionModule.createSession = function (scenario, fromNumber, toNumber, correlat
         duration: 0,
         via: scenario.call.via || null,
         from_user: fromNumber || utils.getRandomPhoneNumber(),
-        from_ip: simulationModule.infrastructure[scenario.call.from].ip,
+        from_ip: simulationModuleOld.infrastructure[scenario.call.from].ip,
         to_user: toNumber || utils.getRandomPhoneNumber(),
-        to_ip: simulationModule.infrastructure[scenario.call.to].ip,
+        to_ip: simulationModuleOld.infrastructure[scenario.call.to].ip,
         target_duration: utils.getRandomInteger(scenario.call.duration[0], scenario.call.duration[1]) * 1000,
         mos_range: scenario.call.mos,
         jitter_range: scenario.call.jitter,
@@ -156,7 +150,7 @@ sessionModule.createSession = function (scenario, fromNumber, toNumber, correlat
         session.correlation_id = correlation_id
     }
     /* TODO: Randomize Ports for Media */
-    let captureId = simulationModule.infrastructure[scenario.call.from].captureId || simulationModule.infrastructure[scenario.call.to].captureId || 12345
+    let captureId = simulationModuleOld.infrastructure[scenario.call.from].captureId || simulationModuleOld.infrastructure[scenario.call.to].captureId || 12345
     session.outDirection = hepModule.generateRCInfo(captureId, 'hep', 1, session?.correlation_id || session.callid, 1, session.from_ip, session.to_ip, 5060, 5060)
     session.outMedia = hepModule.generateRCInfo(captureId, 'hep', 1, session?.correlation_id || session.callid, 1, session.from_ip, session.to_ip, 26768, 51354)
     session.inDirection = hepModule.generateRCInfo(captureId, 'hep', 1, session?.correlation_id || session.callid, 1, session.to_ip, session.from_ip, 5060, 5060)
@@ -175,7 +169,7 @@ sessionModule.update = async function (moment) {
         if (debug) console.log(sessionModule.callFlows[session.callflow][session.state])
         if (sessionModule.callFlows[session.callflow][session.state] == 'INVITE') {
             let via = []
-            if (simulationModule.infrastructure[session.via].ip == session.from_ip) {
+            if (simulationModuleOld.infrastructure[session.via].ip == session.from_ip) {
                 via.push({ srcIp: session.from_ip, dstIp: session.to_ip, srcPort: 5060, dstPort: 5060 })
             }
             let invite = hepModule.generateInvite(session.seq, session.from_user, session.to_user, session.callid, session.outDirection, via)
@@ -273,7 +267,7 @@ sessionModule.update = async function (moment) {
             if (debug) console.log('Session Ended', session.callid)
             sessionModule.scenarios[session.name]--
             sessionModule.sessions.splice(i, 1)
-            if(simulationModule.killed) {
+            if(simulationModuleOld.killed) {
                 console.log('Sessions Remaining', sessionModule.sessions.length)
                 console.log('Scenarios Remaining', sessionModule.scenarios)
             }
@@ -293,23 +287,23 @@ sessionModule.update = async function (moment) {
 * Simulation
 */
 
-const simulationModule = {}
+const simulationModuleOld = {}
 
-simulationModule.start = Date.now()
-simulationModule.diff = 0
-simulationModule.previous = Date.now()
-simulationModule.infrastructure = {}
-simulationModule.config = {}
+simulationModuleOld.start = Date.now()
+simulationModuleOld.diff = 0
+simulationModuleOld.previous = Date.now()
+simulationModuleOld.infrastructure = {}
+simulationModuleOld.config = {}
 
 /**
  * Initialize the Simulation with a config
  * @param {CONFIG} config 
  */
-simulationModule.initializeSimulation = function (config) {
+simulationModuleOld.initializeSimulation = function (config) {
     console.log('Initializing Simulation')
-    simulationModule.config = config
+    simulationModuleOld.config = config
     console.log('Setting up Infrastructure')
-    simulationModule.infrastructure = config.virtualInfrastructure
+    simulationModuleOld.infrastructure = config.virtualInfrastructure
     console.log(config.scenarios)
     sessionModule.initializeSessions(config)
     console.log('Simulation Initialized')
@@ -319,32 +313,32 @@ simulationModule.initializeSimulation = function (config) {
 /**
  * Tick function for the simulation
  */
-simulationModule.tick = function () {
-    simulationModule.diff = Date.now() - simulationModule.previous
-    if (simulationModule.diff > 200) {
+simulationModuleOld.tick = function () {
+    simulationModuleOld.diff = Date.now() - simulationModuleOld.previous
+    if (simulationModuleOld.diff > 200) {
         /* Update all sessions and send HEP accordingly */
         sessionModule.update(Date.now())
 
         /* Check if simulation is still active */
-        if (!simulationModule.killed) {
-            sessionModule.initializeSessions(simulationModule.config)
+        if (!simulationModuleOld.killed) {
+            sessionModule.initializeSessions(simulationModuleOld.config)
         } 
         /* Check if all sessions are finished */
         if (sessionModule.sessions.length == 0) {
             console.log('Simulation Finished')
             process.exit()
         }
-        simulationModule.previous = Date.now()
+        simulationModuleOld.previous = Date.now()
     }
 
-    setTimeout(simulationModule.tick, 100)
+    setTimeout(simulationModuleOld.tick, 100)
 }
 
 /**
  * Kill the Simulation - Sets switch to let simulation know to soft-close.
  */
-simulationModule.killSimulation = function () {
-    simulationModule.killed = true
+simulationModuleOld.killSimulation = function () {
+    simulationModuleOld.killed = true
     console.log('Finishing in Progress Calls, if you need to stop immediately, push CTRL-C again.')
     console.log('Sessions Remaining', sessionModule.sessions.length)
     console.log('Scenarios Remaining', sessionModule.scenarios)
@@ -362,12 +356,7 @@ async function main() {
     let config = await loadConfig()
     /* Initialize infrastructureModule */
     let sessions = await infrastructureModule.createInfrastructureSessions(config)
-    /* Setup Session Module */
-    //sessionModule.initializeSessions(config)
-    /* Start Simulation */
-    //simulationModule.initializeSimulation(config)
-    /* Simulation Tick moves states along */
-    //setTimeout(simulationModule.tick, 200)
+    simulationModule.runSimulation(sessions)
 }
 
 /* Start the main function */

@@ -8,20 +8,34 @@ Manage infrastructure based on configuration.
 import * as utils from './utils.js';
 import stateMachine from './stateMachine.js';
 
+/**
+ * @typedef {{callState: string, location: number, callinfo: {callid: string, from: string , to: string}, mediaInfo: {mos: float, mean_mos: float, jitter: float, mean_jitter: float, packetloss: integer, mean_rfactor: float, direction: number}, locations: string[], infrastructure: object}} SessionState
+ */
+
 const infrastructureModule = {
+    /**
+     * Sessions created for the simulation.
+     * @type {SessionState[]}
+     */
     sessions: [],
+    /**
+     * Create Sessions based on the defined infrastructure in the configuration.
+     * @param {object} config 
+     * @returns {Promise<SessionState[]>} sessions
+     */
     createInfrastructureSessions: async function (config) {
-        console.log("Creating infrastructure sessions...", config.virtualInfrastructure);
+        console.log("🧭 Creating infrastructure sessions...", config.virtualInfrastructure);
         /* For each infrastructure generate the session Infrastructure */
         for (let infrastructure in config.virtualInfrastructure) {
-            console.log(`Creating infrastructure session for ${infrastructure}`);
+            console.log(`🧭 Creating infrastructure session for ${infrastructure}`);
             let y = config.virtualInfrastructure[infrastructure].caller.amount;
-            console.log(`Creating ${y} sessions for caller`, config.virtualInfrastructure[infrastructure].caller);
+            console.log(`🧭 Creating ${y} sessions for caller`, config.virtualInfrastructure[infrastructure].caller);
             for (let i = 1; i < y; i++) {
                 let session = stateMachine.getInitialState();
                 /* Setup number and Callid*/
                 session = this.setupNumberAndCallid(session);
                 session = this.setupLocation(session, config.virtualInfrastructure[infrastructure]);
+                session.infrastructure = config.virtualInfrastructure[infrastructure];
                 this.sessions.push({session})
             }
         }
@@ -36,10 +50,16 @@ const infrastructureModule = {
         newState.callinfo.callid = callid;
         return newState;
     },
+    /**
+     * Setup the location for the session.
+     * @param {SessionState} state 
+     * @param {Object} infrastructure 
+     * @returns {SessionState} newState
+     */
     setupLocation: function (state, infrastructure) {
         let newState = {...state};
         let locations = this.navigateLocations(infrastructure);
-        newState.location = locations[0];
+        newState.location = 0;
         newState.locations = locations; 
 
         return newState;
@@ -58,7 +78,7 @@ const infrastructureModule = {
             }
         }
         locations.push('called');
-
+        console.log("🧭 Navigated locations:", locations);
         return locations;
     },
 }

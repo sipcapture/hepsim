@@ -1,3 +1,7 @@
+/**
+ * Load configuration from a JSON file.
+ * @returns {Promise<{virtualInfrastructure: object}>}
+ */
 async function loadConfig() {
     console.log("Loading configuration...");
     try {

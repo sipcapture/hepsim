@@ -1,85 +1,56 @@
 {
-    "scenarios": [
-        {
-            "name": "normal",
-            "callflow": "default",
-            "call": {
-                "from": "phoneEndpoint1",
-                "via": "sbc1",
-                "to": "phoneEndpoint2",
-                "duration": [62, 122],
-                "amount": 50,
-                "mos": [3.5, 4.5],
-                "jitter": [0, 250],
-                "packetloss": [0, 1]
-            }
-        },
-        {
-            "name": "bad",
-            "callflow": "default",
-            "call": {
-                "from": "phoneEndpoint1",
-                "via": "sbc2",
-                "to": "phoneEndpoint2",
-                "duration": [32, 52],
-                "amount": 10,
-                "mos": [1.9, 3.2],
-                "jitter": [250, 400],
-                "packetloss": [260, 350]
-            }
-        }
-    ],
     "virtualInfrastructure": {
         "default": {
             "caller": {
                 "type": "phone",
-                "amount": 100,
+                "amount": 3,
                 "mos": [3.5, 4.4],
                 "jitter": [0, 250],
                 "packetloss": [0, 1],
                 "captureId": 1111,
+                "ip": "192.123.45.120",
                 "NEXT": ["loadbalancer"]
             },
             "loadbalancer": {
                 "type": "proxy",
                 "publicIP": "192.12.102.56",
                 "privateIP": "17.25.36.12",
-                "PREVIOUS": "caller",
+                "PREVIOUS": ["caller"],
                 "NEXT": ["sbc1", "sbc2"]
             },
             "sbc1": {
                 "type": "sbc",
-                "ip": "127.0.0.33",
+                "ip": "10.0.0.33",
                 "captureId": 1111,
                 "mos": [3.5, 4.4],
                 "jitter": [0, 250],
                 "packetloss": [0, 1],
-                "PREVIOUS": "caller",
+                "PREVIOUS": ["caller"],
                 "NEXT": ["called"]
             },
             "sbc2": {
                 "type": "sbc",
-                "ip": "127.0.0.33",
-                "captureId": 1111,
+                "ip": "10.0.0.34",
+                "captureId": 2222,
                 "mos": [2.9, 3.2],
                 "jitter": [100, 550],
                 "packetloss": [10, 1000],
-                "PREVIOUS": "caller",
+                "PREVIOUS": ["caller"],
                 "NEXT": ["called"]
             },
             "called": {
                 "type": "phone",
-                "amount": 50,
+                "amount": 1,
                 "mos": [3.5, 4.4],
                 "jitter": [0, 250],
                 "packetloss": [0, 1],
-                "PREVIOUS": ["sbc1"]
+                "PREVIOUS": ["sbc1", "sbc2"]
             }
         },
         "auth": {
             "caller": {
                 "type": "phone",
-                "amount": 50,
+                "amount": 3,
                 "mos": [3.5, 4.4],
                 "jitter": [0, 250],
                 "packetloss": [0, 1],
@@ -90,7 +61,7 @@
                 "type": "auth_proxy",
                 "publicIP": "192.12.102.56",
                 "privateIP": "17.25.36.12",
-                "PREVIOUS": "caller",
+                "PREVIOUS": ["caller"],
                 "NEXT": ["sbc1", "sbc2"]
             },
             "sbc1": {
@@ -100,22 +71,22 @@
                 "mos": [3.5, 4.4],
                 "jitter": [0, 250],
                 "packetloss": [0, 1],
-                "PREVIOUS": "caller",
+                "PREVIOUS": ["caller"],
                 "NEXT": ["called"]
             },
             "sbc2": {
                 "type": "sbc",
                 "ip": "127.0.0.33",
-                "captureId": 1111,
+                "captureId": 2222,
                 "mos": [2.9, 3.2],
                 "jitter": [100, 550],
                 "packetloss": [10, 1000],
-                "PREVIOUS": "caller",
+                "PREVIOUS": ["caller"],
                 "NEXT": ["called"]
             },
             "called": {
                 "type": "phone",
-                "amount": 50,
+                "amount": 1,
                 "mos": [3.5, 4.4],
                 "jitter": [0, 250],
                 "packetloss": [0, 1],
@@ -125,10 +96,11 @@
         "busy_failure": {
             "caller": {
                 "type": "phone",
-                "amount": 5,
+                "amount": 1,
                 "mos": [3.5, 4.4],
                 "jitter": [0, 250],
                 "packetloss": [0, 1],
+                "sleep": 12000,
                 "captureId": 1111,
                 "NEXT": ["loadbalancer"]
             },
@@ -136,7 +108,7 @@
                 "type": "proxy",
                 "publicIP": "192.12.102.56",
                 "privateIP": "17.25.36.12",
-                "PREVIOUS": "caller",
+                "PREVIOUS": ["caller"],
                 "NEXT": ["sbc1"]
             },
             "sbc1": {
@@ -147,7 +119,7 @@
                 "mos": [3.5, 4.4],
                 "jitter": [0, 250],
                 "packetloss": [0, 1],
-                "PREVIOUS": "caller",
+                "PREVIOUS": ["caller"],
                 "NEXT": ["called"]
             }
         }
