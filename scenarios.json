@@ -1,0 +1,39 @@
+{
+    "default":
+        {
+            "start_cps": 50,
+            "peak_cps": 100,
+            "max_concurrent": 150,
+            "duration": [60, 240],
+            "flow": ["INVITE", "100Trying", "180Ringing", "200OK", "200OKACK", "MEDIA", "BYE", "200BYE", "END"],
+            "media": {
+                "packetloss": [12, 150],
+                "jitter": [20, 130],
+                "mos": [3.5, 4.5]
+            }
+        },
+    "timeout": 
+        {
+            "cps": 1,
+            "duration": [60, 120],
+            "max_concurrent": 1,
+            "flow": ["INVITE", "100Trying", "180Ringing", "200OK", "200OKACK", "BYE", "408", "END"],
+            "media": {
+                "packetloss": [12, 150],
+                "jitter": [20, 130],
+                "mos": [3.5, 4.5]
+            }
+        },
+    "bad_media":
+        {
+            "cps": 5,
+            "duration": [60, 120],
+            "max_concurrent": 50,
+            "flow": ["INVITE", "100Trying", "180Ringing", "200OK", "200OKACK", "MEDIA", "BYE", "200BYE", "END"],
+            "media": {
+                "packetloss": [300, 500],
+                "jitter": [160, 600],
+                "mos": [1.0, 2.0]
+            }
+        }
+}
