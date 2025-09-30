@@ -18,12 +18,6 @@ import * as hepJs from 'hep-js';
  * @type { {mos: float, mean_mos: float, jitter: float, mean_jitter: float, packetloss: integer, mean_rfactor: float, direction: number} }
  */
 
-/**
- * TODO:
- * Add SRD controls
- * Add SDD controls
- * Finish Registration Flow
- */
 
 const hepModule = {
     /**

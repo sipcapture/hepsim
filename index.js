@@ -9,10 +9,8 @@
 
 import loadConfig from './src/configModule.js';
 import * as utils from './src/utils.js';
-import hepModule from './src/hepModule.js';
-import senderModule from './src/connectionManager.js';
-import infrastructureModule from './src/infrastructureModule.js';
 import simulationModule from './src/simulationModule.js';
+import connectionManager from './src/connectionManager.js';
 
 
 /*
@@ -24,6 +22,9 @@ process.on('SIGINT', function() {
     if (simulationModule.simulationStopped) {
         process.exit(0);
     }
+    mediator.send({type: 'simulationStop'});
+    console.log('Gracefully shutting down from SIGINT (Ctrl-C)');
+    console.log('Press Ctrl-C again to force quit.');
     simulationModule.simulationStop();
 })
 
@@ -344,19 +345,38 @@ simulationModuleOld.killSimulation = function () {
     console.log('Scenarios Remaining', sessionModule.scenarios)
 }
 
+let mediator = {
+    receivers: [],
+    getInterface: () => {
+        return {
+            send: mediator.send,
+            subscribe: mediator.subscribe
+        }
+    },
+    send: (message) => {
+        for (let rec of mediator.receivers) {
+            rec(message)
+        }
+    },
+    subscribe: (callback) => {
+        mediator.receivers.push(callback)
+        return true
+    }
+}
+
 
 /**
  * Main function
  */
 async function main() {
-    console.log('**************** \\|/')
-    console.log(' EXSPUE HEP!---->-*-')
-    console.log('**************** /|\\')
-    console.log('\n\nStarting Call Simulator')
+    console.log('****************')
+    console.log(' EXSPUE HEP!')
+    console.log('****************')
+    console.log('\nStarting Call Simulator')
     let config = await loadConfig()
-    /* Initialize infrastructureModule */
-    let sessions = await infrastructureModule.createInfrastructureSessions(config)
-    simulationModule.runSimulation(sessions)
+    await simulationModule.initialize(mediator.getInterface(), config)
+    await connectionManager.establishConnection(mediator.getInterface())
+    simulationModule.runSimulation()
 }
 
 /* Start the main function */

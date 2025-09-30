@@ -1,37 +1,19 @@
-{
-    "virtualInfrastructure":{
-        "caller": {
-            "type": "phone",
-            "ip": "192.123.45.120",
-            "NEXT": ["loadbalancer"]
-        },
-        "loadbalancer": {
-            "type": "proxy",
-            "publicIP": "192.12.102.56",
-            "privateIP": "17.25.36.12",
-            "PREVIOUS": ["caller"],
-            "NEXT": ["sbc1", "sbc2"]
-        },
-        "sbc1": {
-            "type": "sbc",
-            "ip": "10.0.0.33",
-            "captureId": 1111,
-            "media_port": 18526,
-            "PREVIOUS": ["caller"],
-            "NEXT": ["called"]
-        },
-        "sbc2": {
-            "type": "sbc",
-            "ip": "10.0.0.34",
-            "captureId": 2222,
-            "media_port": 25362,
-            "PREVIOUS": ["caller"],
-            "NEXT": ["called"]
-        },
-        "called": {
-            "type": "phone",
-            "amount": 1,
-            "PREVIOUS": ["sbc1", "sbc2"]
-        }
+[
+    {
+        "name": "normal",
+        "ips": ["128.12.26.32"],
+        "cps_high": 100
+    },
+    {
+        "name": "bad",
+        "ips": ["136.25.33.12"],
+        "interval": 300,
+        "count": 10
+    },
+    {
+        "name": "403",
+        "ips": ["186.30.1.125"],
+        "interval": 900,
+        "count": 50
     }
-}
+]

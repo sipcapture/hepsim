@@ -3,6 +3,7 @@ const connectionManager = {
     port: parseInt(process.env.HEP_PORT) || 9060,
     transport: process.env.HEP_TRANSPORT || 'udp',
     socket: null,
+    mediator: {},
     sendData: function (data) {
         console.log('No sender specified, cannot send data', data);
     },
@@ -10,29 +11,42 @@ const connectionManager = {
         console.log('Error sending HEP Packet')
         console.log(err)
     },
-    establishConnection: async function () {
-        if (this.transport === 'udp') {
+    handleModuleMessage: (input) => {
+        console.log("Connection Manager received input:", input);
+        if (input.type === "sendData") {
+            connectionManager.send(input.data);
+        } else if (input.type === "disconnect") {
+            if (connectionManager.socket) {
+                connectionManager.socket.close();
+            }
+        }
+    },
+    establishConnection: async (mediator) => {
+        connectionManager.mediator = mediator;
+        connectionManager.mediator.subscribe(connectionManager.handleModuleMessage.bind(this));
+        if (connectionManager.transport === 'udp') {
             /* assigns a UDP socket to the connectionManager */
-            this.socket = await Bun.udpSocket({
+            connectionManager.socket = await Bun.udpSocket({
                 connect: {
-                    port: this.port,
-                    hostname: this.receiver,
+                    port: connectionManager.port,
+                    hostname: connectionManager.receiver,
                 },
             });
-            this.sendData = (data) => {
-                let sendSuccess = this.socket.send(data)
+            connectionManager.sendData = (data) => {
+                let sendSuccess = connectionManager.socket.send(data)
                 if (!sendSuccess) {
-                    /* TODO: make a buffer to store data to send when drain even is called */
+                    /* TODO: make a buffer to store data to send when drain event is called */
                     setTimeout(() => {
-                        this.socket.send(data)
+                        connectionManager.socket.send(data)
                     }, 1000);
                 }
             };
-            console.log(`UDP socket connected to ${this.receiver}:${this.port}, ${this.socket}`);
-        } else if (this.transport === 'tcp') {
-            this.socket =  await Bun.connect({
-                hostname: this.receiver,
-                port: this.port,
+            console.log(`UDP socket connected to ${connectionManager.receiver}:${connectionManager.port}, ${connectionManager.socket}`);
+            return true;
+        } else if (connectionManager.transport === 'tcp') {
+            connectionManager.socket =  await Bun.connect({
+                hostname: connectionManager.receiver,
+                port: connectionManager.port,
 
                 socket: {
                     data(socket, data) {
@@ -40,8 +54,8 @@ const connectionManager = {
                         console.log('Received data:', data);
                     },
                     open(socket) {
-                        console.log(`TCP socket connected to ${this.receiver}:${this.port}`);
-                        this.sendData = (data) => {
+                        console.log(`TCP socket connected to ${connectionManager.receiver}:${connectionManager.port}`);
+                        connectionManager.sendData = (data) => {
                             socket.write(data);
                         };
                     },
@@ -70,26 +84,28 @@ const connectionManager = {
                     }, // connection timed out
                 },
             });
-            this.sendData = (data) => {
-                this.socket.write(data);
+            connectionManager.sendData = (data) => {
+                connectionManager.socket.write(data);
             };
             console.log(`Ready to send data over TCP.`);
+            return true;
         } else {
-            console.error('Unsupported transport protocol:', this.transport);
+            console.error('Unsupported transport protocol:', connectionManager.transport);
+            return false;
         }
     },
-    send: async function (data) {
-        if (!this.socket) {
+    send: async (data) => {
+        if (!connectionManager.socket) {
             console.error('Socket is not initialized, establishing connection...');
             try {
-                await this.establishConnection();
+                await connectionManager.establishConnection();
             } catch (error) {
                 console.error('Failed to establish connection:', error);
                 return;
             }
             await Bun.sleep(100); // Wait for the connection to be established
         }
-        return this.sendData(data);
+        return connectionManager.sendData(data);
     }
 }
 
