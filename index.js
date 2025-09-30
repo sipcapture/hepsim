@@ -375,6 +375,9 @@ async function main() {
     let config = await loadConfig()
     await simulationModule.initialize(mediator.getInterface(), config)
     await connectionManager.establishConnection(mediator.getInterface())
+    if (process.env.DEBUG) {
+        mediator.send({type: "debugSession"})
+    }
     simulationModule.runSimulation()
 }
 

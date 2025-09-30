@@ -111,6 +111,15 @@ const hepModule = {
      */
     generate407: function (seq, from, to, callid, rcinfo) {
         let datenow = new Date().getTime()
+        /* Switch Direction */
+        let src = rcinfo.srcIp
+        let dst = rcinfo.dstIp
+        let sport = rcinfo.srcPort
+        let dport = rcinfo.dstPort
+        rcinfo.dstIp = src
+        rcinfo.srcIp = dst
+        rcinfo.dstPort = sport
+        rcinfo.srcPort = dport
         rcinfo.time_sec = Math.floor(datenow / 1000)
         rcinfo.time_usec = (datenow - (rcinfo.time_sec*1000))*1000
     
@@ -222,6 +231,16 @@ const hepModule = {
      */
     generate100Trying: function (seq, from, to, callid, rcinfo) {
         let datenow = new Date().getTime()
+        /* Switch Direction */
+        let src = rcinfo.srcIp
+        let dst = rcinfo.dstIp
+        let sport = rcinfo.srcPort
+        let dport = rcinfo.dstPort
+        rcinfo.dstIp = src
+        rcinfo.srcIp = dst
+        rcinfo.dstPort = sport
+        rcinfo.srcPort = dport
+
         rcinfo.time_sec = Math.floor(datenow / 1000)
         rcinfo.time_usec = (datenow - (rcinfo.time_sec*1000))*1000
     
@@ -249,6 +268,16 @@ const hepModule = {
      */
     generate180Ringing: function (seq, from, to, callid, rcinfo) {
         let datenow = new Date().getTime()
+        /* Switch Direction */
+        let src = rcinfo.srcIp
+        let dst = rcinfo.dstIp
+        let sport = rcinfo.srcPort
+        let dport = rcinfo.dstPort
+        rcinfo.dstIp = src
+        rcinfo.srcIp = dst
+        rcinfo.dstPort = sport
+        rcinfo.srcPort = dport
+
         rcinfo.time_sec = Math.floor(datenow / 1000)
         rcinfo.time_usec = (datenow - (rcinfo.time_sec*1000))*1000
     
@@ -280,6 +309,16 @@ const hepModule = {
      */
     generate200OKInvite: function (seq, from, to, callid, rcinfo) {
         let datenow = new Date().getTime()
+        /* Switch Direction */
+        let src = rcinfo.srcIp
+        let dst = rcinfo.dstIp
+        let sport = rcinfo.srcPort
+        let dport = rcinfo.dstPort
+        rcinfo.dstIp = src
+        rcinfo.srcIp = dst
+        rcinfo.dstPort = sport
+        rcinfo.srcPort = dport
+
         rcinfo.time_sec = Math.floor(datenow / 1000)
         rcinfo.time_usec = (datenow - (rcinfo.time_sec*1000))*1000
     
@@ -345,6 +384,7 @@ const hepModule = {
     },
     /**
      * Generate a Periodic RTP report
+     * @param {string} seq
      * @param {string} from 
      * @param {string} to 
      * @param {string} callid 
@@ -352,7 +392,7 @@ const hepModule = {
      * @param {MEDIAINFO} mediaInfo 
      * @returns {string} Short Report payload
      */
-    generatePeriodicReport: function (callid, rcinfo, mediaInfo) {
+    generatePeriodicReport: function (seq, from, to, callid, rcinfo, mediaInfo) {
         let rcinfoRaw = JSON.parse(JSON.stringify(rcinfo))
         rcinfoRaw.payload_type = 'JSON'
         rcinfoRaw.proto_type = 34
@@ -368,6 +408,7 @@ const hepModule = {
     },
     /**
      * Generate Hangup RTP report
+     * @param {string} seq
      * @param {string} from 
      * @param {string} to 
      * @param {string} callid 
@@ -375,7 +416,7 @@ const hepModule = {
      * @param {MEDIAINFO} mediaInfo 
      * @returns {string} Hangup Report payload
      */
-    generateHangupReport: function (callid, rcinfo, mediaInfo) {
+    generateHangupReport: function (seq, from, to, callid, rcinfo, mediaInfo) {
         let rcinfoRaw = JSON.parse(JSON.stringify(rcinfo))
         rcinfoRaw.payload_type = 'JSON'
         rcinfoRaw.proto_type = 34
@@ -390,6 +431,7 @@ const hepModule = {
     },
     /**
      * Generate Short Hangup RTP report
+     * @param {string} seq
      * @param {string} from 
      * @param {string} to 
      * @param {string} callid 
@@ -397,7 +439,7 @@ const hepModule = {
      * @param {MEDIAINFO} mediaInfo 
      * @returns {string} Hangup Report payload
      */
-    generateShortHangupReport: function (callid, rcinfo, mediaInfo) {
+    generateShortHangupReport: function (seq, from, to, callid, rcinfo, mediaInfo) {
         let rcinfoRaw = JSON.parse(JSON.stringify(rcinfo))
         rcinfoRaw.payload_type = 'JSON'
         rcinfoRaw.proto_type = 35
@@ -411,7 +453,8 @@ const hepModule = {
         return hepJs.encapsulate(rawHangupReport, rcinfoRaw)
     },
     /**
-     * 
+     * Generate Final RTP report
+     * @param {string} seq
      * @param {string} from 
      * @param {string} to 
      * @param {string} callid 
@@ -419,7 +462,7 @@ const hepModule = {
      * @param {MEDIAINFO} mediaInfo 
      * @returns {string} Final Report payload
      */
-    generateFinalReport: function (callid, rcinfo, mediaInfo) {
+    generateFinalReport: function (seq, from, to, callid, rcinfo, mediaInfo) {
         let rcinfoRaw = JSON.parse(JSON.stringify(rcinfo))
         rcinfoRaw.payload_type = 'JSON'
         rcinfoRaw.proto_type = 34
@@ -434,13 +477,14 @@ const hepModule = {
     },
     /**
      * Generate a BYE message
+     * @param {string} seq
      * @param {string} from 
      * @param {string} to 
      * @param {string} callid 
      * @param {RCINFO} rcinfo
      * @returns {string} BYE payload
      */
-    generateBye: function (from, to, callid, rcinfo) {
+    generateBye: function (seq, from, to, callid, rcinfo) {
         let datenow = new Date().getTime()
         rcinfo.time_sec = Math.floor(datenow / 1000)
         rcinfo.time_usec = (datenow - (rcinfo.time_sec*1000))*1000
@@ -465,14 +509,24 @@ const hepModule = {
     },
     /**
      * Generate a 200 OK for a BYE message
+     * @param {string} seq
      * @param {string} from 
      * @param {string} to 
      * @param {string} callid 
      * @param {RCINFO} rcinfo
      * @returns {string} 200 OK BYE payload
      */
-    generate200OKBye: function (from, to, callid, rcinfo) {
+    generate200OKBye: function (seq, from, to, callid, rcinfo) {
         let datenow = new Date().getTime()
+        /* Switch Direction */
+        let src = rcinfo.srcIp
+        let dst = rcinfo.dstIp
+        let sport = rcinfo.srcPort
+        let dport = rcinfo.dstPort
+        rcinfo.dstIp = src
+        rcinfo.srcIp = dst
+        rcinfo.dstPort = sport
+        rcinfo.srcPort = dport
         rcinfo.time_sec = Math.floor(datenow / 1000)
         rcinfo.time_usec = (datenow - (rcinfo.time_sec*1000))*1000
 

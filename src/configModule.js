@@ -14,7 +14,11 @@ async function loadConfig() {
             let exampleFileDescriptor = await Bun.file('./config.json.example');
             let exampleContent = await exampleFileDescriptor.text();
             console.log("Using example configuration:", JSON.parse(exampleContent));
-            return JSON.parse(exampleContent);
+            let config = JSON.parse(exampleContent);
+            if (!config.find(s => s.name === "normal")) {
+                throw new Error("Configuration must include a 'normal' session type.");
+            }
+            return config;
         } else {
             throw new Error("Configuration file not found.");
         }

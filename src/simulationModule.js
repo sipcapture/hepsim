@@ -17,6 +17,7 @@ const simulationModule = {
     sessions: [],
     simulationStopped: false,
     previous: new Date().getTime(),
+    debug: false,
     mediator: {},
     configuration: {},
     initialize: async (mediator, configuration) => {
@@ -30,9 +31,11 @@ const simulationModule = {
         if (input.type === "stop") {
             simulationModule.simulationStop();
         } else if (input.type === "noSessions" && simulationModule.simulationStopped) {
-            console.log("Simulation complete, all sessions finished.");
+            if (simulationModule.debug) console.log("Simulation complete, all sessions finished.");
             simulationModule.mediator.send({type: "disconnect"});
             process.exit(0);
+        } else if (input.type === "debugSimulation") {
+            simulationModule.debug = true;
         }
     },
     getAdjustmentFactor: () => {
@@ -48,7 +51,7 @@ const simulationModule = {
     },
     normalTick: async () => {
         let normalConfig = simulationModule.configuration.find((s => s.name === "normal"));
-        console.log("🕒 Normal tick at", new Date().toISOString(), "with adjusted delay", simulationModule.getAdjustedDelay(normalConfig.cps_high).toFixed(2), "resulting in", (1000 / simulationModule.getAdjustedDelay(normalConfig.cps_high)).toFixed(2), "calls per second");
+        if (simulationModule.debug) console.log("🕒 Normal tick at", new Date().toISOString(), "with adjusted delay", simulationModule.getAdjustedDelay(normalConfig.cps_high).toFixed(2), "resulting in", (1000 / simulationModule.getAdjustedDelay(normalConfig.cps_high)).toFixed(2), "calls per second");
         simulationModule.mediator.send({type: "newSession", config: normalConfig});
         setTimeout(simulationModule.normalTick, simulationModule.getAdjustedDelay(normalConfig.cps_high));
     },
@@ -64,18 +67,18 @@ const simulationModule = {
         let badConfig = simulationModule.configuration.find((s => s.name === "bad"));
         setInterval((badConfig) => {
             if (!simulationModule.simulationStopped) {
-                console.log("🕒 Bad tick at", new Date().toISOString());
+                if (simulationModule.debug) console.log("🕒 Bad tick at", new Date().toISOString());
             }
         }, badConfig.interval * 1000);
         /* Unauthorized calls */
         let unAuthorizedConfig = simulationModule.configuration.find((s => s.name === "403"));
         setInterval((unAuthorizedConfig) => {
             if (!simulationModule.simulationStopped) {
-                console.log("🕒 Unauthorized tick at", new Date().toISOString());
+                if (simulationModule.debug) console.log("🕒 Unauthorized tick at", new Date().toISOString());
             }
         }, unAuthorizedConfig.interval * 1000);
         /* Simulation ticks to Session Module */
-        setInterval(simulationModule.tick, 20); // 20 ms tick for simulation updates
+        setInterval(simulationModule.tick, 200); // 200 ms tick for simulation updates
 
         console.log("▶️  Starting simulation at", new Date().toISOString());
     },
@@ -84,8 +87,8 @@ const simulationModule = {
      *
      */
     tick: async () => {
-        if (Date.now() - simulationModule.previous > 1000) { //20 ms per tick default; 1000 for debug
-            console.log("🔄 Simulation tick at", new Date().toISOString());
+        if (Date.now() - simulationModule.previous > 20) { //20 ms per tick default; 1000 for debug
+            if (simulationModule.debug) console.log("🔄 Simulation tick at", new Date().toISOString());
             simulationModule.mediator.send({type: "tick"});
             simulationModule.previous = Date.now();
         } else {

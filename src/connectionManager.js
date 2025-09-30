@@ -13,6 +13,7 @@ const connectionManager = {
     },
     handleModuleMessage: (input) => {
         if (input.type === "sendData") {
+            console.log('Sending data through connection manager');
             connectionManager.send(input.data);
         } else if (input.type === "disconnect") {
             if (connectionManager.socket) {
