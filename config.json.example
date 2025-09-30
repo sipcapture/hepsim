@@ -2,13 +2,17 @@
     {
         "name": "normal",
         "ips": ["128.12.26.32"],
-        "cps_high": 100
+        "cps_high": 100,
+        "max_duration": 120000,
+        "min_duration": 65000
     },
     {
         "name": "bad",
         "ips": ["136.25.33.12"],
         "interval": 300,
-        "count": 10
+        "count": 10,
+        "max_duration": 120000,
+        "min_duration": 65000
     },
     {
         "name": "403",

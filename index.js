@@ -22,10 +22,9 @@ process.on('SIGINT', function() {
     if (simulationModule.simulationStopped) {
         process.exit(0);
     }
-    mediator.send({type: 'simulationStop'});
+    mediator.send({type: 'stop'});
     console.log('Gracefully shutting down from SIGINT (Ctrl-C)');
     console.log('Press Ctrl-C again to force quit.');
-    simulationModule.simulationStop();
 })
 
 

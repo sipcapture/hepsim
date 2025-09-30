@@ -25,12 +25,10 @@ const simulationModule = {
         simulationModule.configuration = configuration;
         sessionModule.initialize(mediator, configuration);
         console.log("Simulation module initialized with configuration:", configuration, simulationModule.mediator);
-        
     },
     receiveInput: (input) => {
-        console.log("Simulation module received input:", input);
         if (input.type === "stop") {
-            simulationModule.simulationStop()
+            simulationModule.simulationStop();
         } else if (input.type === "noSessions" && simulationModule.simulationStopped) {
             console.log("Simulation complete, all sessions finished.");
             simulationModule.mediator.send({type: "disconnect"});
@@ -50,7 +48,7 @@ const simulationModule = {
     },
     normalTick: async () => {
         let normalConfig = simulationModule.configuration.find((s => s.name === "normal"));
-        console.log("🕒 Normal tick at", new Date().toISOString(), "with adjusted delay", simulationModule.getAdjustedDelay(normalConfig.cps_high).toFixed(2), "resulting in ", (1000 / simulationModule.getAdjustedDelay(normalConfig.cps_high)).toFixed(2), "calls per second");
+        console.log("🕒 Normal tick at", new Date().toISOString(), "with adjusted delay", simulationModule.getAdjustedDelay(normalConfig.cps_high).toFixed(2), "resulting in", (1000 / simulationModule.getAdjustedDelay(normalConfig.cps_high)).toFixed(2), "calls per second");
         simulationModule.mediator.send({type: "newSession", config: normalConfig});
         setTimeout(simulationModule.normalTick, simulationModule.getAdjustedDelay(normalConfig.cps_high));
     },
@@ -88,7 +86,7 @@ const simulationModule = {
     tick: async () => {
         if (Date.now() - simulationModule.previous > 1000) { //20 ms per tick default; 1000 for debug
             console.log("🔄 Simulation tick at", new Date().toISOString());
-            simulationModule.mediator.send("tick", {type: "tick"});
+            simulationModule.mediator.send({type: "tick"});
             simulationModule.previous = Date.now();
         } else {
             // If the tick is too fast, we just return

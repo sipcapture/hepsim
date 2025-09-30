@@ -12,12 +12,12 @@ const connectionManager = {
         console.log(err)
     },
     handleModuleMessage: (input) => {
-        console.log("Connection Manager received input:", input);
         if (input.type === "sendData") {
             connectionManager.send(input.data);
         } else if (input.type === "disconnect") {
             if (connectionManager.socket) {
-                connectionManager.socket.close();
+                console.log('Disconnecting socket');
+                connectionManager.socket = null;
             }
         }
     },
