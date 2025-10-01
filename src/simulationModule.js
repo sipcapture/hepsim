@@ -65,16 +65,24 @@ const simulationModule = {
         setTimeout(simulationModule.normalTick, simulationModule.getAdjustedDelay(normalConfig.cps_high));
         /* Bad MOS calls */
         let badConfig = simulationModule.configuration.find((s => s.name === "bad"));
-        setInterval((badConfig) => {
+        setInterval(async () => {
             if (!simulationModule.simulationStopped) {
-                if (simulationModule.debug) console.log("🕒 Bad tick at", new Date().toISOString());
+                console.log("🕒 Bad tick at", new Date().toISOString());
+                for (let i = 0; i < badConfig.count; i++) {
+                    simulationModule.mediator.send({type: "newSession", config: badConfig});
+                    await Bun.sleep(300); // slight delay between bad calls to avoid bursts
+                }
             }
         }, badConfig.interval * 1000);
         /* Unauthorized calls */
         let unAuthorizedConfig = simulationModule.configuration.find((s => s.name === "403"));
-        setInterval((unAuthorizedConfig) => {
+        setInterval(async () => {
             if (!simulationModule.simulationStopped) {
-                if (simulationModule.debug) console.log("🕒 Unauthorized tick at", new Date().toISOString());
+                console.log("🕒 Unauthorized tick at", new Date().toISOString());
+                for (let i = 0; i < unAuthorizedConfig.count; i++) {
+                    simulationModule.mediator.send({type: "newSession", config: unAuthorizedConfig});
+                    await Bun.sleep(300); // slight delay between bad calls to avoid bursts
+                }
             }
         }, unAuthorizedConfig.interval * 1000);
         /* Simulation ticks to Session Module */
