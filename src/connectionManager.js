@@ -3,23 +3,26 @@ const connectionManager = {
     port: parseInt(process.env.HEP_PORT) || 9060,
     transport: process.env.HEP_TRANSPORT || 'udp',
     socket: null,
+    debug: false,
     mediator: {},
     sendData: function (data) {
-        console.log('No sender specified, cannot send data', data);
+        if (connectionManager.debug) console.log('No sender specified, cannot send data', data);
     },
     errorHandler: (err) => {
-        console.log('Error sending HEP Packet')
-        console.log(err)
+        if (connectionManager.debug) console.log('Error sending HEP Packet')
+        if (connectionManager.debug) console.log(err)
     },
     handleModuleMessage: (input) => {
         if (input.type === "sendData") {
-            console.log('Sending data through connection manager');
+            if (connectionManager.debug) console.log('Sending data through connection manager');
             connectionManager.send(input.data);
         } else if (input.type === "disconnect") {
             if (connectionManager.socket) {
-                console.log('Disconnecting socket');
+                if (connectionManager.debug) console.log('Disconnecting socket');
                 connectionManager.socket = null;
             }
+        } else if (input.type === "debugConnection") {
+            connectionManager.debug = true;
         }
     },
     establishConnection: async (mediator) => {
@@ -42,7 +45,7 @@ const connectionManager = {
                     }, 1000);
                 }
             };
-            console.log(`UDP socket connected to ${connectionManager.receiver}:${connectionManager.port}, ${connectionManager.socket}`);
+            if (connectionManager.debug) console.log(`UDP socket connected to ${connectionManager.receiver}:${connectionManager.port}, ${connectionManager.socket}`);
             return true;
         } else if (connectionManager.transport === 'tcp') {
             connectionManager.socket =  await Bun.connect({
@@ -52,10 +55,10 @@ const connectionManager = {
                 socket: {
                     data(socket, data) {
                         // Handle incoming data
-                        console.log('Received data:', data);
+                        if (connectionManager.debug) console.log('Received data:', data);
                     },
                     open(socket) {
-                        console.log(`TCP socket connected to ${connectionManager.receiver}:${connectionManager.port}`);
+                        if (connectionManager.debug) console.log(`TCP socket connected to ${connectionManager.receiver}:${connectionManager.port}`);
                         connectionManager.sendData = (data) => {
                             socket.write(data);
                         };
@@ -64,11 +67,11 @@ const connectionManager = {
                         if (error) {
                             console.error('Connection closed with error:', error);
                         } else {
-                            console.log('Connection closed gracefully');
+                            if (connectionManager.debug) console.log('Connection closed gracefully');
                         }
                     },
                     drain(socket) {
-                        console.log('Socket buffer drained');
+                        if (connectionManager.debug) console.log('Socket buffer drained');
                     },
                     error(socket, error) {
                         console.error('Socket error:', error);
@@ -78,17 +81,17 @@ const connectionManager = {
                         console.error('Connection error:', error);
                     }, // connection failed
                     end(socket) {
-                        console.log('Connection ended by server');
+                        if (connectionManager.debug) console.log('Connection ended by server');
                     }, // connection closed by server
                     timeout(socket) {
-                        console.log('Connection timed out');
+                        if (connectionManager.debug) console.log('Connection timed out');
                     }, // connection timed out
                 },
             });
             connectionManager.sendData = (data) => {
                 connectionManager.socket.write(data);
             };
-            console.log(`Ready to send data over TCP.`);
+            if (connectionManager.debug) console.log(`Ready to send data over TCP.`);
             return true;
         } else {
             console.error('Unsupported transport protocol:', connectionManager.transport);

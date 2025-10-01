@@ -57,10 +57,10 @@ const hepModule = {
      * @param {string} to 
      * @param {string} callid 
      * @param {RCINFO} rcinfo 
-     * @param {VIA} viaInfoArray 
+     * @param {MEDIAINFO} mediaInfo 
      * @returns {string} Invite payload
      */
-    generateInvite: function (seq, from, to, callid, rcinfo, viaInfoArray) {
+    generateInvite: function (seq, from, to, callid, rcinfo, mediaInfo) {
         let datenow = new Date().getTime()
         rcinfo.time_sec = Math.floor(datenow / 1000)
         rcinfo.time_usec = (datenow - (rcinfo.time_sec*1000)) * 1000
@@ -86,7 +86,7 @@ const hepModule = {
         inviteRaw.push('s=SIP Call\r\n')
         inviteRaw.push('c=IN IP4 ' + rcinfo.srcIp + '\r\n')
         inviteRaw.push('t=0 0\r\n')
-        inviteRaw.push('m=audio 5004 RTP/AVP 0 8 9 18 101\r\n')
+        inviteRaw.push('m=audio ' + mediaInfo.srcPort + ' RTP/AVP 0 8 9 18 101\r\n')
         inviteRaw.push('a=sendrecv\r\n')
         inviteRaw.push('a=rtpmap:0 PCMU/8000\r\n')
         inviteRaw.push('a=ptime:20\r\n')
@@ -176,10 +176,10 @@ const hepModule = {
      * @param {string} to 
      * @param {string} callid 
      * @param {RCINFO} rcinfo 
-     * @param {VIA} viaInfoArray 
+     * @param {MEDIAINFO} mediaInfo 
      * @returns {string} Invite payload
      */
-    generateInviteAuth: function (seq, from, to, callid, rcinfo, viaInfoArray) {
+    generateInviteAuth: function (seq, from, to, callid, rcinfo, mediaInfo) {
         let datenow = new Date().getTime()
         rcinfo.time_sec = Math.floor(datenow / 1000)
         rcinfo.time_usec = (datenow - (rcinfo.time_sec*1000)) * 1000
@@ -206,7 +206,7 @@ const hepModule = {
         inviteRaw.push('s=SIP Call\r\n')
         inviteRaw.push('c=IN IP4 ' + rcinfo.srcIp + '\r\n')
         inviteRaw.push('t=0 0\r\n')
-        inviteRaw.push('m=audio 5004 RTP/AVP 0 8 9 18 101\r\n')
+        inviteRaw.push('m=audio ' + mediaInfo.srcPort + ' RTP/AVP 0 8 9 18 101\r\n')
         inviteRaw.push('a=sendrecv\r\n')
         inviteRaw.push('a=rtpmap:0 PCMU/8000\r\n')
         inviteRaw.push('a=ptime:20\r\n')
@@ -231,6 +231,7 @@ const hepModule = {
      */
     generate100Trying: function (seq, from, to, callid, rcinfo) {
         let datenow = new Date().getTime()
+        rcinfo = Object.assign({}, rcinfo) // Create a shallow copy to avoid mutating the original
         /* Switch Direction */
         let src = rcinfo.srcIp
         let dst = rcinfo.dstIp
@@ -268,6 +269,7 @@ const hepModule = {
      */
     generate180Ringing: function (seq, from, to, callid, rcinfo) {
         let datenow = new Date().getTime()
+        rcinfo = Object.assign({}, rcinfo) // Create a shallow copy to avoid mutating the original
         /* Switch Direction */
         let src = rcinfo.srcIp
         let dst = rcinfo.dstIp
@@ -305,10 +307,12 @@ const hepModule = {
      * @param {string} to 
      * @param {string} callid 
      * @param {RCINFO} rcinfo 
+     * @param {MEDIAINFO} mediaInfo
      * @returns {string} 200 OK payload
      */
-    generate200OKInvite: function (seq, from, to, callid, rcinfo) {
+    generate200OKInvite: function (seq, from, to, callid, rcinfo, mediaInfo) {
         let datenow = new Date().getTime()
+        rcinfo = Object.assign({}, rcinfo) // Create a shallow copy to avoid mutating the original
         /* Switch Direction */
         let src = rcinfo.srcIp
         let dst = rcinfo.dstIp
@@ -341,7 +345,7 @@ const hepModule = {
         raw200OK.push('s=session\r\n')
         raw200OK.push('c=IN IP4 ' + rcinfo.dstIp + '\r\n')
         raw200OK.push('t=0 0\r\n')
-        raw200OK.push('m=audio 12366 RTP/AVP 8 0 18 101\r\n')
+        raw200OK.push('m=audio ' + mediaInfo.dstPort + ' RTP/AVP 8 0 18 101\r\n')
         raw200OK.push('a=rtpmap:8 PCMA/8000\r\n')
         raw200OK.push('a=rtpmap:0 PCMU/8000\r\n')
         raw200OK.push('a=rtpmap:18 G729/8000\r\n')
@@ -390,10 +394,30 @@ const hepModule = {
      * @param {string} callid 
      * @param {RCINFO} rcinfo 
      * @param {MEDIAINFO} mediaInfo 
+     * @param {boolean} reverse
      * @returns {string} Short Report payload
      */
-    generatePeriodicReport: function (seq, from, to, callid, rcinfo, mediaInfo) {
+    generatePeriodicReport: function (seq, from, to, callid, rcinfo, mediaInfo, reverse) {
         let rcinfoRaw = JSON.parse(JSON.stringify(rcinfo))
+        let src, dst, sport, dport, dir
+        if (!reverse) {
+            src = rcinfoRaw.srcIp
+            dst = rcinfoRaw.dstIp
+            sport = mediaInfo.srcPort
+            dport = mediaInfo.dstPort
+            dir = 0
+        } else {
+            dst = rcinfoRaw.srcIp
+            src = rcinfoRaw.dstIp
+            dport = mediaInfo.srcPort
+            sport = mediaInfo.dstPort
+            dir = 1
+        }
+        rcinfoRaw.direction = dir
+        rcinfoRaw.srcPort = sport
+        rcinfoRaw.dstPort = dport
+        rcinfoRaw.srcIp = src
+        rcinfoRaw.dstIp = dst
         rcinfoRaw.payload_type = 'JSON'
         rcinfoRaw.proto_type = 34
         rcinfoRaw.correlation_id = callid
@@ -402,7 +426,7 @@ const hepModule = {
         rcinfoRaw.time_sec = Math.floor(datenow / 1000)
         rcinfoRaw.time_usec = (datenow - (rcinfoRaw.time_sec*1000))*1000
         
-        let rawShortReport = `{"CORRELATION_ID":"${callid}","RTP_SIP_CALL_ID":"${callid}","DELTA":19.983,"JITTER":${mediaInfo.jitter},"REPORT_TS":${new Date().getTime()/1000},"TL_BYTE":0,"SKEW":0.000,"TOTAL_PK":1512,"EXPECTED_PK":1512,"PACKET_LOSS":${mediaInfo.packetloss},"SEQ":0,"MAX_JITTER":0.010,"MAX_DELTA":20.024,"MAX_SKEW":0.172,"MEAN_JITTER":${mediaInfo.mean_jitter},"MIN_MOS":4.032, "MEAN_MOS":${mediaInfo.mean_mos}, "MOS":${mediaInfo.mos},"RFACTOR":80.200,"MIN_RFACTOR":80.200,"MEAN_RFACTOR":80.200,"SRC_IP":"${rcinfoRaw.srcIp}", "SRC_PORT":${rcinfoRaw.srcPort}, "DST_IP":"${rcinfoRaw.dstIp}","DST_PORT":${rcinfoRaw.dstPort},"SRC_MAC":"00-30-48-7E-5D-C6","DST_MAC":"00-12-80-D7-38-5E","OUT_ORDER":0,"SSRC_CHG":0,"CODEC_PT":9, "CLOCK":8000,"CODEC_NAME":"G722","DIR":0,"REPORT_NAME":"${rcinfoRaw.srcIp}:${rcinfoRaw.srcPort}","PARTY":${mediaInfo.direction},"TYPE":"PERIODIC"}`
+        let rawShortReport = `{"CORRELATION_ID":"${callid}","RTP_SIP_CALL_ID":"${callid}","DELTA":19.983,"JITTER":${mediaInfo.jitter},"REPORT_TS":${new Date().getTime()/1000},"TL_BYTE":0,"SKEW":0.000,"TOTAL_PK":1512,"EXPECTED_PK":1512,"PACKET_LOSS":${mediaInfo.packetloss},"SEQ":0,"MAX_JITTER":0.010,"MAX_DELTA":20.024,"MAX_SKEW":0.172,"MEAN_JITTER":${mediaInfo.mean_jitter},"MIN_MOS":4.032, "MEAN_MOS":${mediaInfo.mean_mos}, "MOS":${mediaInfo.mos},"RFACTOR":80.200,"MIN_RFACTOR":80.200,"MEAN_RFACTOR":80.200,"SRC_IP":"${src}", "SRC_PORT":${sport}, "DST_IP":"${dst}","DST_PORT":${dport},"SRC_MAC":"00-30-48-7E-5D-C6","DST_MAC":"00-12-80-D7-38-5E","OUT_ORDER":0,"SSRC_CHG":0,"CODEC_PT":9, "CLOCK":8000,"CODEC_NAME":"G722", "DIR":0, "REPORT_NAME":"${src}:${sport}", "PARTY":${dir}, "TYPE":"PERIODIC"}`
     
         return hepJs.encapsulate(rawShortReport, rcinfoRaw)
     },
@@ -414,10 +438,31 @@ const hepModule = {
      * @param {string} callid 
      * @param {RCINFO} rcinfo 
      * @param {MEDIAINFO} mediaInfo 
+     * @param {boolean} reverse
      * @returns {string} Hangup Report payload
      */
-    generateHangupReport: function (seq, from, to, callid, rcinfo, mediaInfo) {
+    generateHangupReport: function (seq, from, to, callid, rcinfo, mediaInfo, reverse) {
         let rcinfoRaw = JSON.parse(JSON.stringify(rcinfo))
+        let src, dst, sport, dport, dir
+        if (!reverse) {
+            src = rcinfoRaw.srcIp
+            dst = rcinfoRaw.dstIp
+            sport = mediaInfo.srcPort
+            dport = mediaInfo.dstPort
+            dir = 0
+        }
+        else {
+            dst = rcinfoRaw.srcIp
+            src = rcinfoRaw.dstIp
+            dport = mediaInfo.srcPort
+            sport = mediaInfo.dstPort
+            dir = 1
+        }
+        rcinfoRaw.direction = dir
+        rcinfoRaw.srcPort = sport
+        rcinfoRaw.dstPort = dport
+        rcinfoRaw.srcIp = src
+        rcinfoRaw.dstIp = dst
         rcinfoRaw.payload_type = 'JSON'
         rcinfoRaw.proto_type = 34
         rcinfoRaw.correlation_id = callid
@@ -425,7 +470,7 @@ const hepModule = {
         let datenow = new Date().getTime()
         rcinfoRaw.time_sec = Math.floor(datenow / 1000)
         rcinfoRaw.time_usec = (datenow - (rcinfoRaw.time_sec*1000))*1000
-        let rawHangupReport = `{"CORRELATION_ID":"${callid}","RTP_SIP_CALL_ID":"${callid}","DELTA":25.009,"JITTER":6.699,"REPORT_TS":${new Date().getTime() / 1000},"TL_BYTE":223320,"SKEW":5.941,"TOTAL_PK":997,"EXPECTED_PK":996,"PACKET_LOSS":${mediaInfo.packetloss},"SEQ":0,"MAX_JITTER":10.378,"MAX_DELTA":53.889,"MAX_SKEW":26.510,"MEAN_JITTER":${mediaInfo.mean_jitter},"MIN_MOS":4.030, "MEAN_MOS":${mediaInfo.mean_mos}, "MOS":${mediaInfo.mean_mos},"RFACTOR":${mediaInfo.mean_rfactor},"MIN_RFACTOR":93.200,"MEAN_RFACTOR":${mediaInfo.mean_rfactor},"SRC_IP":"${rcinfoRaw.srcIp}", "SRC_PORT":${rcinfoRaw.srcPort}, "DST_IP":"${rcinfoRaw.dstIp}","DST_PORT":${rcinfoRaw.dstPort},"SRC_MAC":"08-00-27-57-CD-E8","DST_MAC":"08-00-27-57-CD-E9","OUT_ORDER":0,"SSRC_CHG":0,"CODEC_CH":0,"CODEC_PT":9, "CLOCK":8000,"CODEC_NAME":"G722","DIR":${mediaInfo.direction},"REPORT_NAME":"${rcinfoRaw.srcIp}:${rcinfoRaw.srcPort}","PARTY":${mediaInfo.direction},"IP_QOS":184,"INFO_VLAN":0,"VIDEO":0,"REPORT_START":${mediaInfo.lastReport},"REPORT_END":${new Date().getTime() / 1000},"SSRC":"0X6687F6CF","RTP_START":${mediaInfo.rtpstart},"RTP_STOP":${new Date().getTime()},"ONE_WAY_RTP":0,"EVENT":0,"STYPE":"SIP:REQ","TYPE":"HANGUP"}`
+        let rawHangupReport = `{"CORRELATION_ID":"${callid}","RTP_SIP_CALL_ID":"${callid}","DELTA":25.009,"JITTER":6.699,"REPORT_TS":${new Date().getTime() / 1000},"TL_BYTE":223320,"SKEW":5.941,"TOTAL_PK":997,"EXPECTED_PK":996,"PACKET_LOSS":${mediaInfo.packetloss},"SEQ":0,"MAX_JITTER":10.378,"MAX_DELTA":53.889,"MAX_SKEW":26.510,"MEAN_JITTER":${mediaInfo.mean_jitter},"MIN_MOS":4.030, "MEAN_MOS":${mediaInfo.mean_mos}, "MOS":${mediaInfo.mean_mos},"RFACTOR":${mediaInfo.mean_rfactor},"MIN_RFACTOR":93.200,"MEAN_RFACTOR":${mediaInfo.mean_rfactor},"SRC_IP":"${src}", "SRC_PORT":${sport}, "DST_IP":"${dst}","DST_PORT":${dport},"SRC_MAC":"08-00-27-57-CD-E8","DST_MAC":"08-00-27-57-CD-E9","OUT_ORDER":0,"SSRC_CHG":0,"CODEC_CH":0,"CODEC_PT":9, "CLOCK":8000,"CODEC_NAME":"G722","DIR":${mediaInfo.direction},"REPORT_NAME":"${src}:${sport}","PARTY":${dir},"IP_QOS":184,"INFO_VLAN":0,"VIDEO":0,"REPORT_START":${mediaInfo.lastReport},"REPORT_END":${new Date().getTime() / 1000},"SSRC":"0X6687F6CF","RTP_START":${mediaInfo.rtpstart},"RTP_STOP":${new Date().getTime()},"ONE_WAY_RTP":0,"EVENT":0,"STYPE":"SIP:REQ","TYPE":"HANGUP"}`
     
         return hepJs.encapsulate(rawHangupReport, rcinfoRaw)
     },
@@ -437,10 +482,31 @@ const hepModule = {
      * @param {string} callid 
      * @param {RCINFO} rcinfo 
      * @param {MEDIAINFO} mediaInfo 
+     * @param {boolean} reverse
      * @returns {string} Hangup Report payload
      */
-    generateShortHangupReport: function (seq, from, to, callid, rcinfo, mediaInfo) {
+    generateShortHangupReport: function (seq, from, to, callid, rcinfo, mediaInfo, reverse) {
         let rcinfoRaw = JSON.parse(JSON.stringify(rcinfo))
+        let src, dst, sport, dport, dir
+        if (!reverse) {
+            src = rcinfoRaw.srcIp
+            dst = rcinfoRaw.dstIp
+            sport = mediaInfo.srcPort
+            dport = mediaInfo.dstPort
+            dir = 0
+        }
+        else {
+            dst = rcinfoRaw.srcIp
+            src = rcinfoRaw.dstIp
+            dport = mediaInfo.srcPort
+            sport = mediaInfo.dstPort
+            dir = 1
+        }
+        rcinfoRaw.direction = dir
+        rcinfoRaw.srcPort = sport
+        rcinfoRaw.dstPort = dport
+        rcinfoRaw.srcIp = src
+        rcinfoRaw.dstIp = dst
         rcinfoRaw.payload_type = 'JSON'
         rcinfoRaw.proto_type = 35
         rcinfoRaw.correlation_id = callid
@@ -448,7 +514,7 @@ const hepModule = {
         let datenow = new Date().getTime()
         rcinfoRaw.time_sec = Math.floor(datenow / 1000)
         rcinfoRaw.time_usec = (datenow - (rcinfoRaw.time_sec*1000))*1000
-        let rawHangupReport = `{"CORRELATION_ID":"${callid}","RTP_SIP_CALL_ID":"${callid}","PACKET_LOSS":${mediaInfo.packetloss},"EXPECTED_PK":996,"CODEC_PT":9,"CODEC_NAME":"G722","CODEC_RATE":8000,"MEAN_JITTER":${mediaInfo.mean_jitter},"MOS":${mediaInfo.mean_mos},"RFACTOR":${mediaInfo.mean_rfactor},"DIR":${mediaInfo.direction},"ONE_WAY_RTP":0,"REPORT_NAME":"${rcinfoRaw.srcIp}:26876","PARTY":${mediaInfo.direction},"TYPE":"HANGUP"}`
+        let rawHangupReport = `{"CORRELATION_ID":"${callid}","RTP_SIP_CALL_ID":"${callid}","PACKET_LOSS":${mediaInfo.packetloss},"EXPECTED_PK":996,"CODEC_PT":9,"CODEC_NAME":"G722","CODEC_RATE":8000,"MEAN_JITTER":${mediaInfo.mean_jitter},"MOS":${mediaInfo.mean_mos},"RFACTOR":${mediaInfo.mean_rfactor},"DIR":${dir},"ONE_WAY_RTP":0,"REPORT_NAME":"${src}:${sport}","PARTY":${dir},"TYPE":"HANGUP"}`
     
         return hepJs.encapsulate(rawHangupReport, rcinfoRaw)
     },
@@ -460,10 +526,31 @@ const hepModule = {
      * @param {string} callid 
      * @param {RCINFO} rcinfo 
      * @param {MEDIAINFO} mediaInfo 
+     * @param {boolean} reverse
      * @returns {string} Final Report payload
      */
-    generateFinalReport: function (seq, from, to, callid, rcinfo, mediaInfo) {
+    generateFinalReport: function (seq, from, to, callid, rcinfo, mediaInfo, reverse) {
         let rcinfoRaw = JSON.parse(JSON.stringify(rcinfo))
+        let src, dst, sport, dport, dir
+        if (!reverse) {
+            src = rcinfoRaw.srcIp
+            dst = rcinfoRaw.dstIp
+            sport = mediaInfo.srcPort
+            dport = mediaInfo.dstPort
+            dir = 0
+        }
+        else {
+            dst = rcinfoRaw.srcIp
+            src = rcinfoRaw.dstIp
+            dport = mediaInfo.srcPort
+            sport = mediaInfo.dstPort
+            dir = 1
+        }
+        rcinfoRaw.direction = dir
+        rcinfoRaw.srcPort = sport
+        rcinfoRaw.dstPort = dport
+        rcinfoRaw.srcIp = src
+        rcinfoRaw.dstIp = dst
         rcinfoRaw.payload_type = 'JSON'
         rcinfoRaw.proto_type = 34
         rcinfoRaw.correlation_id = callid
@@ -471,7 +558,7 @@ const hepModule = {
         let datenow = new Date().getTime()
         rcinfoRaw.time_sec = Math.floor(datenow / 1000)
         rcinfoRaw.time_usec = (datenow - (rcinfoRaw.time_sec*1000))*1000
-        let rawFinalReport = `{"CORRELATION_ID":"${callid}", "RTP_SIP_CALL_ID":"${callid}","MIN_MOS":4.409, "MIN_RFACTOR":93.200, "MIN_SKEW": 0, "MIN_JITTER":0, "MAX_MOS": 4.409, "MAX_RFACTOR":93.200, "MAX_SKEW":0, "MAX_JITTER":4.409, "MEAN_MOS":${mediaInfo.mean_mos}, "MEAN_RFACTOR":${mediaInfo.mean_rfactor}, "MEAN_JITTER":${mediaInfo.mean_jitter}, "TOTAL_PACKET_LOSS":${mediaInfo.packetloss},"TOTAL_PACKETS":5000,"DIR":${mediaInfo.direction},"REPORT_NAME":"${rcinfoRaw.srcIp}","PARTY":${mediaInfo.direction}, "ONE_WAY_RTP": 0, "TYPE":"FINAL"}`
+        let rawFinalReport = `{"CORRELATION_ID":"${callid}", "RTP_SIP_CALL_ID":"${callid}","MIN_MOS":4.409, "MIN_RFACTOR":93.200, "MIN_SKEW": 0, "MIN_JITTER":0, "MAX_MOS": 4.409, "MAX_RFACTOR":93.200, "MAX_SKEW":0, "MAX_JITTER":4.409, "MEAN_MOS":${mediaInfo.mean_mos}, "MEAN_RFACTOR":${mediaInfo.mean_rfactor}, "MEAN_JITTER":${mediaInfo.mean_jitter}, "TOTAL_PACKET_LOSS":${mediaInfo.packetloss},"TOTAL_PACKETS":5000,"DIR":${dir},"REPORT_NAME":"${src}","PARTY":${dir}, "ONE_WAY_RTP": 0, "TYPE":"FINAL"}`
     
         return hepJs.encapsulate(rawFinalReport, rcinfoRaw)
     },

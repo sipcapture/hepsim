@@ -49,7 +49,17 @@ const sessionModule = {
                 to: utils.getRandomPhoneNumber(),
                 targetDuration: Math.floor(Math.random() * (config.max_duration - config.min_duration + 1)) + config.min_duration,
                 duration: 0,
-                mediaInfo: {mos: 4.409, mean_mos: 4.409, jitter: 1.0, mean_jitter: 1.0, packetloss: 0, mean_rfactor: 90, direction: 0}
+                mediaInfo: {
+                    srcPort: utils.getRandomInteger(4000,10000), 
+                    dstPort: utils.getRandomInteger(4000,10000), 
+                    mos: 4.409, 
+                    mean_mos: 4.409, 
+                    jitter: 1.0, 
+                    mean_jitter: 1.0, 
+                    packetloss: 0, 
+                    mean_rfactor: 90, 
+                    direction: 0
+                },
             };
             let sourceIP = utils.pickRandomElement(config.ips);
             if (!session.rcinfo) {
@@ -64,7 +74,18 @@ const sessionModule = {
                 to: utils.getRandomPhoneNumber(),
                 targetDuration: Math.floor(Math.random() * (config.max_duration - config.min_duration + 1)) + config.min_duration,
                 duration: 0,
-                mediaInfo: {mos: 3.332, mean_mos: 3.332, jitter: 1.0, mean_jitter: 1.0, packetloss: 0, mean_rfactor: 90, direction: 0}
+                mediaInfo: {
+                    srcPort: utils.getRandomInteger(4000,10000), 
+                    dstPort: utils.getRandomInteger(4000,10000), 
+                    mos: 3.342, 
+                    mean_mos: 3.342, 
+                    jitter: 1.0, 
+                    mean_jitter: 1.0, 
+                    packetloss: 0, 
+                    mean_rfactor: 90, 
+                    direction: 0
+                },
+
             };
             let sourceIP = utils.pickRandomElement(config.ips);
             if (!session.rcinfo) {
@@ -95,18 +116,25 @@ const sessionModule = {
             sessionModule.sessions.forEach((session) => {
                 let currentState = session.state.shift();
                 if (currentState === 'MEDIA') {
+                    if (!session.previous) { 
+                        session.previous = Date.now(); 
+                        session.mediaInfo.rtpstart = Date.now();
+                        session.mediaInfo.lastReport = Date.now();
+                    }
                     session.duration = session.duration + 200; // increment duration by 20 ms
+                    // console.log("checking: ", session.previous, Date.now(), session.previous - Date.now(), session.duration, session.targetDuration);
                     /* Handle Media */
                     if (session.duration >= session.targetDuration) {
                         return;
                     } else {
                         session.state.unshift('MEDIA');
-                        if (session.previous - Date.now() > 30000) { // every 30 seconds
-                            /* do Media stuff */
-                            let mediaMessage = hepModule.generatePeriodicReport(session.seq, session.from, session.to, session.callid, session.rcinfo, session.mediaInfo);
+                        if ((Date.now() - session.previous) > 30000) { // every 30 seconds
+                            /* TODO: Vary Media Parameters to simulate progress */
+                            let mediaMessage = hepModule.generatePeriodicReport(session.seq, session.from, session.to, session.callid, session.rcinfo, session.mediaInfo, false);
                             sessionModule.mediator.send({type: "sendData", data: mediaMessage});
+                            let mediaMessageReverse = hepModule.generatePeriodicReport(session.seq, session.from, session.to, session.callid, session.rcinfo, session.mediaInfo, true);
+                            sessionModule.mediator.send({type: "sendData", data: mediaMessageReverse});
                             if (sessionModule.debug) console.log("Generated media message for session", session.callid, ":\n", mediaMessage);
-                            session.state.unshift('MEDIA');
                             if (sessionModule.debug) console.log("Current duration for session", session.callid, "is", session.duration, "of target", session.targetDuration);
                             session.previous = Date.now();
                         }
@@ -114,10 +142,22 @@ const sessionModule = {
                 } else if (currentState != 'END' && currentState != 'MEDIA') {
                     if (sessionModule.debug) console.log("Session", session.callid, "advancing to state:", currentState, sessionModule.flowMap.get(currentState), currentState != 'END');
                     // if (sessionModule.debug) console.log("Session details:", session);
-                    let message = hepModule[sessionModule.flowMap.get(currentState)](session.seq, session.from, session.to, session.callid, session.rcinfo);
+                    let message = hepModule[sessionModule.flowMap.get(currentState)](session.seq, session.from, session.to, session.callid, session.rcinfo, session.mediaInfo);
                     sessionModule.mediator.send({type: "sendData", data: message});
                     // if (sessionModule.debug) console.log("Generated message for state", currentState, ":\n", message);
                 } else if (currentState === 'END') {
+                    let hangupMessage = hepModule.generateHangupReport(session.seq, session.from, session.to, session.callid, session.rcinfo, session.mediaInfo, false);
+                    sessionModule.mediator.send({type: "sendData", data: hangupMessage});
+                    let hangupMessageReverse = hepModule.generateHangupReport(session.seq, session.from, session.to, session.callid, session.rcinfo, session.mediaInfo, true);
+                    sessionModule.mediator.send({type: "sendData", data: hangupMessageReverse});
+                    let finalMessage = hepModule.generateFinalReport(session.seq, session.from, session.to, session.callid, session.rcinfo, session.mediaInfo, false);
+                    sessionModule.mediator.send({type: "sendData", data: finalMessage});
+                    let finalMessageReverse = hepModule.generateFinalReport(session.seq, session.from, session.to, session.callid, session.rcinfo, session.mediaInfo, true);
+                    sessionModule.mediator.send({type: "sendData", data: finalMessageReverse});
+                    let shortMessage = hepModule.generateShortHangupReport(session.seq, session.from, session.to, session.callid, session.rcinfo, session.mediaInfo, false);
+                    sessionModule.mediator.send({type: "sendData", data: shortMessage});
+                    let shortMessageReverse = hepModule.generateShortHangupReport(session.seq, session.from, session.to, session.callid, session.rcinfo, session.mediaInfo, true);
+                    sessionModule.mediator.send({type: "sendData", data: shortMessageReverse});
                     if (sessionModule.debug) console.log("Session complete:", session.callid);
                     sessionModule.sessions = sessionModule.sessions.filter(s => s.callid !== session.callid);
                 }
