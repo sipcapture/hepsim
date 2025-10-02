@@ -1,13 +1,12 @@
-FROM oven/bun:1.2.15 AS base
+FROM oven/bun:1.2.23
+
 WORKDIR /app
 
-FROM base AS install
-RUN mkdir -p /tmp/prod
-COPY . /tmp/prod/
-RUN cd /tmp/prod && bun install 
+# Copy only manifest files first to optimize caching
+COPY package.json bun.lockb* ./
+RUN bun install --frozen-lockfile
 
-FROM base AS release
-COPY --from=install /tmp/prod/node_modules ./node_modules
+# Now copy the rest of your project files
 COPY . .
 
 USER bun
