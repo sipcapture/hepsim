@@ -112,6 +112,7 @@ const hepModule = {
      */
     generate407: function (seq, from, to, callid, rcinfo) {
         let datenow = new Date().getTime()
+        rcinfo = Object.assign({}, rcinfo) // Create a shallow copy to avoid mutating the original
         /* Switch Direction */
         let src = rcinfo.srcIp
         let dst = rcinfo.dstIp
@@ -738,6 +739,7 @@ const hepModule = {
      */
     generate200OKBye: function (seq, from, to, callid, rcinfo) {
         let datenow = new Date().getTime()
+        rcinfo = Object.assign({}, rcinfo) // Create a shallow copy to avoid mutating the original
         /* Switch Direction */
         let src = rcinfo.srcIp
         let dst = rcinfo.dstIp

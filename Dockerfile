@@ -6,8 +6,14 @@ WORKDIR /app
 COPY package.json bun.lockb* ./
 RUN bun install --frozen-lockfile
 
-# Now copy the rest of your project files
+# Copy the rest of the project files
 COPY . .
 
+# Compile the Bun project into a binary
+RUN bun build ./index.js --compile --outfile /app/hepsim
+
+# Change user
 USER bun
-ENTRYPOINT ["bun", "run", "index.js"]
+
+# Use the compiled binary as the entrypoint
+ENTRYPOINT ["/app/hepsim"]

@@ -49,6 +49,7 @@ const sessionModule = {
                 to: utils.getRandomPhoneNumber(),
                 targetDuration: Math.floor(Math.random() * (config.max_duration - config.min_duration + 1)) + config.min_duration,
                 duration: 0,
+                media: true,
                 mos_range: config.mos_range || [4.2, 4.4],
                 jitter_range: config.jitter_range || [0.8, 1.2],
                 packetloss_range: config.packetloss_range || [0, 1],
@@ -84,6 +85,7 @@ const sessionModule = {
                 to: utils.getRandomPhoneNumber(),
                 targetDuration: Math.floor(Math.random() * (config.max_duration - config.min_duration + 1)) + config.min_duration,
                 duration: 0,
+                media: true,
                 mos_range: config.mos_range || [2.8, 3.5],
                 jitter_range: config.jitter_range || [250, 450],
                 packetloss_range: config.packetloss_range || [0, 1],
@@ -117,6 +119,7 @@ const sessionModule = {
                 seq: utils.getRandomInteger(1000, 9999),
                 from: utils.getRandomPhoneNumber(),
                 to: utils.getRandomPhoneNumber(),
+                media: false,
                 targetDuration: Math.floor(Math.random() * (config.max_duration - config.min_duration + 1)) + config.min_duration,
                 duration: 0,
                 mediaInfo: {
@@ -194,22 +197,24 @@ const sessionModule = {
                     sessionModule.mediator.send({type: "sendData", data: message});
                     // if (sessionModule.debug) console.log("Generated message for state", currentState, ":\n", message);
                 } else if (currentState === 'END') {
-                    let hangupMessage = hepModule.generateHangupReport(session.seq, session.from, session.to, session.callid, session.rcinfo, session.mediaInfo, false);
-                    sessionModule.mediator.send({type: "sendData", data: hangupMessage});
-                    let hangupMessageReverse = hepModule.generateHangupReport(session.seq, session.from, session.to, session.callid, session.rcinfo, session.mediaInfo, true);
-                    sessionModule.mediator.send({type: "sendData", data: hangupMessageReverse});
-                    let hangupMessageRTCP = hepModule.generateHangupReportRTCP(session.seq, session.from, session.to, session.callid, session.rcinfo, session.mediaInfo, false);
-                    sessionModule.mediator.send({type: "sendData", data: hangupMessageRTCP});
-                    let hangupMessageRTCPReverse = hepModule.generateHangupReportRTCP(session.seq, session.from, session.to, session.callid, session.rcinfo, session.mediaInfo, true);
-                    sessionModule.mediator.send({type: "sendData", data: hangupMessageRTCPReverse});
-                    let finalMessage = hepModule.generateFinalReport(session.seq, session.from, session.to, session.callid, session.rcinfo, session.mediaInfo, false);
-                    sessionModule.mediator.send({type: "sendData", data: finalMessage});
-                    let finalMessageReverse = hepModule.generateFinalReport(session.seq, session.from, session.to, session.callid, session.rcinfo, session.mediaInfo, true);
-                    sessionModule.mediator.send({type: "sendData", data: finalMessageReverse});
-                    let shortMessage = hepModule.generateShortHangupReport(session.seq, session.from, session.to, session.callid, session.rcinfo, session.mediaInfo, false);
-                    sessionModule.mediator.send({type: "sendData", data: shortMessage});
-                    let shortMessageReverse = hepModule.generateShortHangupReport(session.seq, session.from, session.to, session.callid, session.rcinfo, session.mediaInfo, true);
-                    sessionModule.mediator.send({type: "sendData", data: shortMessageReverse});
+                    if (session.media) {
+                        let hangupMessage = hepModule.generateHangupReport(session.seq, session.from, session.to, session.callid, session.rcinfo, session.mediaInfo, false);
+                        sessionModule.mediator.send({type: "sendData", data: hangupMessage});
+                        let hangupMessageReverse = hepModule.generateHangupReport(session.seq, session.from, session.to, session.callid, session.rcinfo, session.mediaInfo, true);
+                        sessionModule.mediator.send({type: "sendData", data: hangupMessageReverse});
+                        let hangupMessageRTCP = hepModule.generateHangupReportRTCP(session.seq, session.from, session.to, session.callid, session.rcinfo, session.mediaInfo, false);
+                        sessionModule.mediator.send({type: "sendData", data: hangupMessageRTCP});
+                        let hangupMessageRTCPReverse = hepModule.generateHangupReportRTCP(session.seq, session.from, session.to, session.callid, session.rcinfo, session.mediaInfo, true);
+                        sessionModule.mediator.send({type: "sendData", data: hangupMessageRTCPReverse});
+                        let finalMessage = hepModule.generateFinalReport(session.seq, session.from, session.to, session.callid, session.rcinfo, session.mediaInfo, false);
+                        sessionModule.mediator.send({type: "sendData", data: finalMessage});
+                        let finalMessageReverse = hepModule.generateFinalReport(session.seq, session.from, session.to, session.callid, session.rcinfo, session.mediaInfo, true);
+                        sessionModule.mediator.send({type: "sendData", data: finalMessageReverse});
+                        let shortMessage = hepModule.generateShortHangupReport(session.seq, session.from, session.to, session.callid, session.rcinfo, session.mediaInfo, false);
+                        sessionModule.mediator.send({type: "sendData", data: shortMessage});
+                        let shortMessageReverse = hepModule.generateShortHangupReport(session.seq, session.from, session.to, session.callid, session.rcinfo, session.mediaInfo, true);
+                        sessionModule.mediator.send({type: "sendData", data: shortMessageReverse});
+                    }
                     if (sessionModule.debug) console.log("Session complete:", session.callid);
                     sessionModule.sessions = sessionModule.sessions.filter(s => s.callid !== session.callid);
                 }
