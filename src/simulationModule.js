@@ -6,7 +6,7 @@ import * as utils from './utils.js';
 import sessionModule from './sessionModule.js';
 
 /**
- * @typedef {{callState: string, location: number, callinfo: {callid: string, from: string , to: string}, mediaInfo: {mos: float, mean_mos: float, jitter: float, mean_jitter: float, packetloss: integer, mean_rfactor: float, direction: number}, locations: string[], infrastructure: object}} SessionState
+ * @typedef {{callState: string, location: number, callinfo: {callid: string, from: string, to: string}, mediaInfo: {mos: float, mean_mos: float, jitter: float, mean_jitter: float, packetloss: integer, mean_rfactor: float, direction: number}, locations: string[], infrastructure: object}} SessionState
  */
 
 const simulationModule = {
@@ -25,7 +25,7 @@ const simulationModule = {
     unAuthorizedConfig: {},
     initialize: async (mediator, configuration) => {
         simulationModule.mediator = mediator;
-        simulationModule.mediator.subscribe(simulationModule.receiveInput.bind(simulationModule));
+        simulationModule.mediator.subscribe(simulationModule.receiveInput);
         simulationModule.configuration = configuration;
         sessionModule.initialize(mediator, configuration);
         console.log("Simulation module initialized with configuration:", configuration, simulationModule.mediator);
@@ -53,10 +53,11 @@ const simulationModule = {
         return (simulationModule.getAdjustmentFactor() * 1000) / CPS;
     },
     normalTick: async () => {
-        let normalConfig = simulationModule.configuration.find((s => s.name === "normal"));
-        if (simulationModule.debug) console.log("🕒 Normal tick at", new Date().toISOString(), "with adjusted delay", simulationModule.getAdjustedDelay(normalConfig.cps_high).toFixed(2), "resulting in", (1000 / simulationModule.getAdjustedDelay(normalConfig.cps_high)).toFixed(2), "calls per second");
-        simulationModule.mediator.send({type: "newSession", config: normalConfig});
-        setTimeout(simulationModule.normalTick, simulationModule.getAdjustedDelay(normalConfig.cps_high));
+        if (!simulationModule.simulationStopped) {
+            if (simulationModule.debug) console.log("🕒 Normal tick at", new Date().toISOString(), "with adjusted delay", simulationModule.getAdjustedDelay(simulationModule.normalConfig.cps_high).toFixed(2), "resulting in", (1000 / simulationModule.getAdjustedDelay(simulationModule.normalConfig.cps_high)).toFixed(2), "calls per second");
+            simulationModule.mediator.send({type: "newSession", config: simulationModule.normalConfig});
+            setTimeout(simulationModule.normalTick, simulationModule.getAdjustedDelay(simulationModule.normalConfig.cps_high));
+        }
     },
     badTick: async () => {
         if (!simulationModule.simulationStopped) {
@@ -71,8 +72,8 @@ const simulationModule = {
     unAuthorizedTick: async () => {
         if (!simulationModule.simulationStopped) {
             console.log("🕒 Unauthorized tick at", new Date().toISOString());
-            for (let i = 0; i < unAuthorizedConfig.count; i++) {
-                simulationModule.mediator.send({type: "newSession", config: unAuthorizedConfig});
+            for (let i = 0; i < simulationModule.unAuthorizedConfig.count; i++) {
+                simulationModule.mediator.send({type: "newSession", config: simulationModule.unAuthorizedConfig});
                 await Bun.sleep(300); // slight delay between bad calls to avoid bursts
             }
             setTimeout(simulationModule.unAuthorizedTick, (simulationModule.unAuthorizedConfig.interval * 1000) + utils.getRandomInteger(0, 120000));
@@ -85,7 +86,8 @@ const simulationModule = {
     runSimulation: async () => {
         /* Normal call flows */
         let normalConfig = simulationModule.configuration.find((s => s.name === "normal"));
-        setTimeout(simulationModule.normalTick, simulationModule.getAdjustedDelay(normalConfig.cps_high));
+        simulationModule.normalConfig = normalConfig;
+        setTimeout(simulationModule.normalTick, simulationModule.getAdjustedDelay(simulationModule.normalConfig.cps_high));
         /* Bad MOS calls */
         let badConfig = simulationModule.configuration.find((s => s.name === "bad"));
         simulationModule.badConfig = badConfig;
