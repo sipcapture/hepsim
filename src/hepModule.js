@@ -100,7 +100,6 @@ const hepModule = {
     
         return hepJs.encapsulate(inviteRaw.join(''), rcinfo)
     },
-    /* TODO: Add 403, Add RTCP, Check bad calls, reduce CPS to 50, increase duration to 240 */
     /**
      * Generate a 407 Proxy Authentication Required
      * @param {string} seq

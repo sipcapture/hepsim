@@ -138,7 +138,7 @@ const sessionModule = {
         sessionModule.sessions.push(session);
     },
     advanceSessions: () => {
-        console.log("Current Sessions in Progress:", sessionModule.sessions.length);
+        if (sessionModule.debug) console.log("Current Sessions in Progress:", sessionModule.sessions.length);
         if (sessionModule.sessions.length === 0) {
             sessionModule.mediator.send({type: "noSessions"});
         } else if (sessionModule.sessions.length > 0) {
@@ -150,7 +150,7 @@ const sessionModule = {
                         session.mediaInfo.rtpstart = Date.now();
                         session.mediaInfo.lastReport = Math.floor(Date.now() / 1000);
                     }
-                    session.duration = session.duration + 200; // increment duration by 20 ms
+                    session.duration = session.duration + 200; // increment duration by 200 ms
                     // console.log("checking: ", session.previous, Date.now(), session.previous - Date.now(), session.duration, session.targetDuration);
                     /* Handle Media */
                     if (session.duration >= session.targetDuration) {
