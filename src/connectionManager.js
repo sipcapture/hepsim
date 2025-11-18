@@ -66,12 +66,14 @@ const connectionManager = {
                     close(socket, error) {
                         if (error) {
                             console.error('Connection closed with error:', error);
+                            connectionManager.establishConnection(connectionManager.mediator);
                         } else {
                             if (connectionManager.debug) console.log('Connection closed gracefully');
+                            connectionManager.establishConnection(connectionManager.mediator);
                         }
                     },
                     drain(socket) {
-                        if (connectionManager.debug) console.log('Socket buffer drained');
+                        if (connectionManager.debug) console.log('!!! Socket buffer drained');
                     },
                     error(socket, error) {
                         console.error('Socket error:', error);
@@ -82,14 +84,20 @@ const connectionManager = {
                     }, // connection failed
                     end(socket) {
                         if (connectionManager.debug) console.log('Connection ended by server');
+                        connectionManager.establishConnection(connectionManager.mediator);
                     }, // connection closed by server
                     timeout(socket) {
                         if (connectionManager.debug) console.log('Connection timed out');
+                        connectionManager.establishConnection(connectionManager.mediator);
                     }, // connection timed out
                 },
             });
             connectionManager.sendData = (data) => {
-                connectionManager.socket.write(data);
+                let success = connectionManager.socket.write(data);
+                if (connectionManager.debug) console.log(`Data sent over TCP: ${success}`);
+                if (!success) {
+                    console.log('TCP socket buffer full, waiting for drain event');
+                }
             };
             if (connectionManager.debug) console.log(`Ready to send data over TCP.`);
             return true;
