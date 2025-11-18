@@ -93,7 +93,11 @@ const connectionManager = {
                 },
             });
             connectionManager.sendData = (data) => {
-                connectionManager.socket.write(data);
+                let success = connectionManager.socket.write(data);
+                if (connectionManager.debug) console.log(`Data sent over TCP: ${success}`);
+                if (!success) {
+                    console.log('TCP socket buffer full, waiting for drain event');
+                }
             };
             if (connectionManager.debug) console.log(`Ready to send data over TCP.`);
             return true;
