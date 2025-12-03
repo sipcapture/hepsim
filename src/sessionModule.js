@@ -6,6 +6,7 @@ const sessionModule = {
     mediator: {},
     sessions: [],
     stopped: false,
+    paused: false,
     debug: false,
     flowMap: new Map(),
     initialize: (mediator, configuration) => {
@@ -32,9 +33,13 @@ const sessionModule = {
         } else if (input.type === "stop") {
             sessionModule.stopped = true;
         } else if (input.type === "tick") {
-            sessionModule.advanceSessions();
+            if (!sessionModule.paused) sessionModule.advanceSessions();
         } else if (input.type === "debugSession") {
             sessionModule.debug = true;
+        } else if (input.type === 'pause') {
+            sessionModule.paused = true;
+        } else if (input.type === 'unpause') {
+            sessionModule.paused = false;
         }
     },
     createSession: (config) => {
