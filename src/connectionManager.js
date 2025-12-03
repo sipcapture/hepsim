@@ -74,6 +74,7 @@ const connectionManager = {
                     },
                     drain(socket) {
                         if (connectionManager.debug) console.log('!!! Socket buffer drained');
+                        connectionManager.mediator.send({type: 'unpause'});
                     },
                     error(socket, error) {
                         console.error('Socket error:', error);
@@ -97,6 +98,7 @@ const connectionManager = {
                 if (connectionManager.debug) console.log(`Data sent over TCP: ${success}`);
                 if (!success) {
                     console.log('TCP socket buffer full, waiting for drain event');
+                    connectionManager.mediator.send({type: 'pause'});
                 }
             };
             if (connectionManager.debug) console.log(`Ready to send data over TCP.`);
