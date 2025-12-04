@@ -95,8 +95,7 @@ const connectionManager = {
             });
             connectionManager.sendData = (data) => {
                 let success = connectionManager.socket.write(data);
-                if (connectionManager.debug) console.log(`Data sent over TCP: ${success}`);
-                if (!success) {
+                if (success < 1) {
                     console.log('TCP socket buffer full, waiting for drain event');
                     connectionManager.mediator.send({type: 'pause'});
                 }

@@ -33,13 +33,17 @@ const sessionModule = {
         } else if (input.type === "stop") {
             sessionModule.stopped = true;
         } else if (input.type === "tick") {
-            if (!sessionModule.paused) sessionModule.advanceSessions();
+            if (!sessionModule.paused) {
+              sessionModule.advanceSessions();
+            }
         } else if (input.type === "debugSession") {
             sessionModule.debug = true;
         } else if (input.type === 'pause') {
             sessionModule.paused = true;
+            console.log('Paused Session Progress due to Backpressure.');
         } else if (input.type === 'unpause') {
             sessionModule.paused = false;
+            console.log('Unpaused Session Progress to resume sending.');
         }
     },
     createSession: (config) => {

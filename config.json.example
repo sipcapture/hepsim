@@ -2,7 +2,7 @@
     {
         "name": "normal",
         "ips": ["128.12.26.32"],
-        "cps_high": 50,
+        "cps_high": 200,
         "max_duration": 250000,
         "min_duration": 160000,
         "mos_range": [4.2, 4.4],
