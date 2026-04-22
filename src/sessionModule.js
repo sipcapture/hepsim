@@ -1,14 +1,43 @@
 import * as utils from './utils.js';
 import hepModule from './hepModule.js';
 
+/**
+ * @typedef {Object} SessionState
+ * @property {string} callid
+ * @property {string[]} state
+ * @property {number} seq
+ * @property {string} from
+ * @property {string} to
+ * @property {number} targetDuration
+ * @property {number} duration
+ * @property {boolean} media
+ * @property {number[]} mos_range
+ * @property {number[]} jitter_range
+ * @property {number[]} packetloss_range
+ * @property {import('./hepModule.js').MEDIAINFO} mediaInfo
+ * @property {import('./hepModule.js').RCINFO} rcinfo
+ * @property {number?} previous
+ */
+
 
 const sessionModule = {
-    mediator: {},
+    /**
+     * @type {{send: function, subscribe: function}}
+     */
+    mediator: {send: () => {}, subscribe: () => {}},
+    /**
+     * @type {SessionState[]}
+     */
     sessions: [],
     stopped: false,
     paused: false,
     debug: false,
     flowMap: new Map(),
+    /**
+     * Initializes the session module with the given mediator and configuration.
+     * @param {{send: function, subscribe: function}} mediator 
+     * @param {object} configuration 
+     */
     initialize: (mediator, configuration) => {
         sessionModule.mediator = mediator;
         sessionModule.mediator.subscribe(sessionModule.receiveInput.bind(sessionModule));
@@ -27,6 +56,9 @@ const sessionModule = {
         sessionModule.flowMap.set('INVITEAUTH', 'generateInviteAuth');
         sessionModule.flowMap.set('403', 'generate403');
     },
+    /**
+     * @param {{type: string, config: {name:string, max_duration:number, min_duration:number, mos_range:number[], jitter_range:number[], packetloss_range:number[], ips:string[]}}} input 
+     */
     receiveInput: (input) => {
         if (input.type === "newSession") {
             if (!sessionModule.stopped) sessionModule.createSession(input.config);
@@ -46,8 +78,15 @@ const sessionModule = {
             console.log('Unpaused Session Progress to resume sending.');
         }
     },
+    /**
+     * @param {{name:string, max_duration:number, min_duration:number, mos_range?:number[], jitter_range?:number[], packetloss_range?:number[], ips:string[]}} config 
+     * @returns 
+     */
     createSession: (config) => {
         if (sessionModule.debug) console.log("Creating new session with config:", config);
+        /**
+         * @type {SessionState}
+         */
         let session = {};
         if (config.name === "normal") {
             session = {
@@ -81,7 +120,14 @@ const sessionModule = {
                     direction: 0
                 },
             };
+            /**
+             * @type {string|null}
+             */
             let sourceIP = utils.pickRandomElement(config.ips);
+            if (sourceIP === undefined) {
+                console.log("No source IPs provided in config. Cannot generate session with RCInfo.");
+                return;
+            }
             if (!session.rcinfo) {
                 session.rcinfo = hepModule.generateRCInfo(14520, 'myhep', 1, session.callid, 1, sourceIP, '172.26.25.32', 5060, 5061);
             }
@@ -136,6 +182,9 @@ const sessionModule = {
                     dstPort: utils.getRandomInteger(4000,10000), 
                 },
             };
+            /**
+             * @type {string|null}
+             */
             let sourceIP = utils.pickRandomElement(config.ips);
             if (!session.rcinfo) {
                 session.rcinfo = hepModule.generateRCInfo(14620, 'myhep', 1, session.callid, 1, sourceIP, '156.12.33.56', 5060, 5060);
@@ -147,11 +196,12 @@ const sessionModule = {
         sessionModule.sessions.push(session);
     },
     advanceSessions: () => {
-        if (sessionModule.debug) console.log("Current Sessions in Progress:", sessionModule.sessions.length);
+        let debug = sessionModule.debug;
+        if (debug) console.log("Current Sessions in Progress:", sessionModule.sessions.length);
         if (sessionModule.sessions.length === 0) {
             sessionModule.mediator.send({type: "noSessions"});
-        } else if (sessionModule.sessions.length > 0) {
-            sessionModule.sessions.forEach((session) => {
+        } else {
+            for (let session of sessionModule.sessions) {
                 let currentState = session.state.shift();
                 if (currentState === 'MEDIA') {
                     if (!session.previous) { 
@@ -172,10 +222,10 @@ const sessionModule = {
                             let jitter = utils.getRandomFloat(session.jitter_range[0], session.jitter_range[1])
                             let packetloss = utils.getRandomInteger(session.packetloss_range[0], session.packetloss_range[1])
                             session.mediaInfo.mos = mos
-                            session.mediaInfo.mean_mos = parseFloat(parseFloat((session.mediaInfo.mean_mos + mos) / 2).toFixed(3))
+                            session.mediaInfo.mean_mos = Math.round((session.mediaInfo.mean_mos + mos) * 1000) / 1000
                             if (mos < session.mediaInfo.min_mos) session.mediaInfo.min_mos = mos
                             session.mediaInfo.jitter = jitter
-                            session.mediaInfo.mean_jitter = parseFloat(parseFloat((session.mediaInfo.mean_jitter + jitter) / 2).toFixed(3)) 
+                            session.mediaInfo.mean_jitter = Math.round((session.mediaInfo.mean_jitter + jitter) * 1000) / 1000
                             if (jitter > session.mediaInfo.max_jitter) session.mediaInfo.max_jitter = jitter
                             session.mediaInfo.total_packets += utils.getRandomInteger(400, 550) // assume 1 packet per second
                             session.mediaInfo.global_packets += session.mediaInfo.total_packets
@@ -192,19 +242,19 @@ const sessionModule = {
                             sessionModule.mediator.send({type: "sendData", data: mediaMessageRTCP});
                             let mediaMessageRTCPReverse = hepModule.generatePeriodicReportRTCP(session.seq, session.from, session.to, session.callid, session.rcinfo, session.mediaInfo, true);
                             sessionModule.mediator.send({type: "sendData", data: mediaMessageRTCPReverse});
-                            if (sessionModule.debug) console.log("Generated media message for session", session.callid, ":\n", mediaMessage);
-                            if (sessionModule.debug) console.log("Current duration for session", session.callid, "is", session.duration, "of target", session.targetDuration);
+                            if (debug) console.log("Generated media message for session", session.callid, ":\n", mediaMessage);
+                            if (debug) console.log("Current duration for session", session.callid, "is", session.duration, "of target", session.targetDuration);
                             /* Reset Timer */
                             session.previous = Date.now();
                             session.mediaInfo.lastReport = Math.floor(Date.now() / 1000);
                         }
                     }
                 } else if (currentState != 'END' && currentState != 'MEDIA') {
-                    if (sessionModule.debug) console.log("Session", session.callid, "advancing to state:", currentState, sessionModule.flowMap.get(currentState), currentState != 'END');
-                    // if (sessionModule.debug) console.log("Session details:", session);
+                    if (debug) console.log("Session", session.callid, "advancing to state:", currentState, sessionModule.flowMap.get(currentState), currentState != 'END');
+                    // if (debug) console.log("Session details:", session);
                     let message = hepModule[sessionModule.flowMap.get(currentState)](session.seq, session.from, session.to, session.callid, session.rcinfo, session.mediaInfo);
                     sessionModule.mediator.send({type: "sendData", data: message});
-                    // if (sessionModule.debug) console.log("Generated message for state", currentState, ":\n", message);
+                    // if (debug) console.log("Generated message for state", currentState, ":\n", message);
                 } else if (currentState === 'END') {
                     if (session.media) {
                         let hangupMessage = hepModule.generateHangupReport(session.seq, session.from, session.to, session.callid, session.rcinfo, session.mediaInfo, false);
@@ -224,10 +274,10 @@ const sessionModule = {
                         let shortMessageReverse = hepModule.generateShortHangupReport(session.seq, session.from, session.to, session.callid, session.rcinfo, session.mediaInfo, true);
                         sessionModule.mediator.send({type: "sendData", data: shortMessageReverse});
                     }
-                    if (sessionModule.debug) console.log("Session complete:", session.callid);
+                    if (debug) console.log("Session complete:", session.callid);
                     sessionModule.sessions = sessionModule.sessions.filter(s => s.callid !== session.callid);
                 }
-            });
+            };
         }
     },
 }

@@ -28,7 +28,7 @@ process.on('SIGINT', function() {
 
 
 /**
- * @typedef {{callState: string, location: number, callinfo: {callid: string, from: string , to: string}, mediaInfo: {mos: float, mean_mos: float, jitter: float, mean_jitter: float, packetloss: integer, mean_rfactor: float, direction: number}, locations: string[]}} SessionState
+ * @typedef {{callState: string, location: number, callinfo: {callid: string, from: string , to: string}, mediaInfo: {mos: number, mean_mos: number, jitter: number, mean_jitter: number, packetloss: number, mean_rfactor: number, direction: number}, locations: string[]}} SessionState
  */
 
 
@@ -48,7 +48,15 @@ oldSessionModule.callFlows = {
  * @type {{scenarios: SCENARIO[], virtualInfrastructure: {namedString: {type: string, ip: string}}}}
  */
 
+/**
+ * @typedef MediatorInterface
+ * @type {{send: function, subscribe: function}}
+ */
 let mediator = {
+    /**
+     * Receivers for the mediator to send messages to
+     * @type {function[]}
+     */
     receivers: [],
     getInterface: () => {
         return {
@@ -56,11 +64,20 @@ let mediator = {
             subscribe: mediator.subscribe
         }
     },
+    /**
+     * Send a message to all subscribed receivers
+     * @param {any} message 
+     */
     send: (message) => {
         for (let rec of mediator.receivers) {
             rec(message)
         }
     },
+    /**
+     * 
+     * @param {function} callback 
+     * @returns {boolean}
+     */
     subscribe: (callback) => {
         mediator.receivers.push(callback)
         return true

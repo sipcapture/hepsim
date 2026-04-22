@@ -6,7 +6,12 @@ import * as utils from './utils.js';
 import sessionModule from './sessionModule.js';
 
 /**
- * @typedef {{callState: string, location: number, callinfo: {callid: string, from: string, to: string}, mediaInfo: {mos: float, mean_mos: float, jitter: float, mean_jitter: float, packetloss: integer, mean_rfactor: float, direction: number}, locations: string[], infrastructure: object}} SessionState
+ * @typedef {{callState: string, location: number, callinfo: {callid: string, from: string, to: string}, mediaInfo: {mos: number, mean_mos: number, jitter: number, mean_jitter: number, packetloss: number, mean_rfactor: number, direction: number}, locations: string[], infrastructure: object}} SessionState
+ */
+
+/**
+ * @typedef MediatorInterface
+ * @type {{send: function, subscribe: function}}
  */
 
 const simulationModule = {
@@ -18,11 +23,32 @@ const simulationModule = {
     simulationStopped: false,
     previous: new Date().getTime(),
     debug: false,
-    mediator: {},
-    configuration: {},
-    normalConfig: {},
-    badConfig: {},
-    unAuthorizedConfig: {},
+    /**
+     * @type {MediatorInterface}
+     */
+    mediator: {send: () => {}, subscribe: () => {}},
+    /**
+     * @type {{name: string}[]}
+     * @property {function} find - Find a configuration by name
+     */
+    configuration: [],
+    /**
+     * @type {{cps_high: number, interval: number}}
+     */
+    normalConfig: {cps_high: 10, interval: 60},
+    /**
+     * @type {{count: number, interval: number}}
+     */
+    badConfig: {interval: 300, count: 5},
+    /**
+     * @type {{interval: number, count: number}}
+     */
+    unAuthorizedConfig: {interval: 300, count: 5},
+    /**
+     * 
+     * @param {MediatorInterface} mediator 
+     * @param {{name: string}[]} configuration 
+     */
     initialize: async (mediator, configuration) => {
         simulationModule.mediator = mediator;
         simulationModule.mediator.subscribe(simulationModule.receiveInput);
@@ -30,6 +56,10 @@ const simulationModule = {
         sessionModule.initialize(mediator, configuration);
         console.log("Simulation module initialized with configuration:", configuration, simulationModule.mediator);
     },
+    /**
+     * 
+     * @param {{type: string, config: {name: string}}} input 
+     */
     receiveInput: (input) => {
         if (input.type === "stop") {
             simulationModule.simulationStop();
@@ -45,10 +75,15 @@ const simulationModule = {
         // Adjust the CPS based on the time of day
         let now = new Date();
         let highPeakStart = new Date();
-        highPeakStart = highPeakStart.setUTCHours(11, 0, 0, 0);
+        highPeakStart.setUTCHours(11, 0, 0, 0);
         let randomization = Math.random() * 2000; // add some randomness into the timing
-        return Math.abs((now - highPeakStart) + randomization) / 1000 / 60 / 60 ;
+        return Math.abs((now.getTime() - highPeakStart.getTime()) + randomization) / 1000 / 60 / 60 ;
     },
+    /**
+     * 
+     * @param {number} CPS 
+     * @returns 
+     */
     getAdjustedDelay: (CPS) => {
         return (simulationModule.getAdjustmentFactor() * 1000) / CPS;
     },
@@ -81,7 +116,6 @@ const simulationModule = {
     },
     /**
      * Run the simulation with the given sessions.
-     * @param {SessionState[]} sessions - The sessions to run the simulation on.
      */
     runSimulation: async () => {
         /* Normal call flows */

@@ -5,7 +5,7 @@ import * as hepJs from 'hep-js';
 
 /**
  * @typedef RCINFO
- * @type {{type: string, version: number, payload_type: number, captureId: string, capturePass: string, ip_family: number, protocol: number, proto_type: number, correlation_id: string, srcIp: string, dstIp: string, srcPort: number, dstPort: number}}
+ * @type {{type: string, version: number, payload_type: number, captureId: number, capturePass: string, ip_family: number, protocol: number, proto_type: number, correlation_id: string, srcIp: string, dstIp: string, srcPort: number, dstPort: number, time_sec: number, time_usec: number}}
  */
 
 /**
@@ -15,9 +15,8 @@ import * as hepJs from 'hep-js';
 
 /**
  * @typedef MEDIAINFO
- * @type { {mos: float, mean_mos: float, jitter: float, mean_jitter: float, packetloss: integer, mean_rfactor: float, direction: number} }
+ * @type { {mos: number, mean_mos: number, jitter: number, mean_jitter: number, packetloss: number, mean_rfactor: number, direction: number, srcPort: number, dstPort: number, tl_bytes: number, total_packets: number, max_jitter: number, min_mos: number, lastReport: number, global_packets: number, global_packetloss: number, rtpstart: number, rtpend: number, global_bytes: number} }
  */
-
 
 const hepModule = {
     /**
@@ -47,12 +46,14 @@ const hepModule = {
             srcIp: sourceIP,
             dstIp: destinationIP,
             srcPort: sourcePort,
-            dstPort: destinationPort
+            dstPort: destinationPort,
+            time_sec: 0,
+            time_usec: 0
         }
     },
     /**
      * Generate a generic SIP Invite
-     * @param {string} seq 
+     * @param {number} seq 
      * @param {string} from 
      * @param {string} to 
      * @param {string} callid 
@@ -102,7 +103,7 @@ const hepModule = {
     },
     /**
      * Generate a 407 Proxy Authentication Required
-     * @param {string} seq
+     * @param {number} seq
      * @param {string} from
      * @param {string} to
      * @param {string} callid
@@ -145,7 +146,7 @@ const hepModule = {
     },
     /**
      * Generate an Ack for a 407 Proxy Authentication Required
-     * @param {string} seq 
+     * @param {number} seq 
      * @param {string} from 
      * @param {string} to 
      * @param {string} callid 
@@ -172,7 +173,7 @@ const hepModule = {
     },
     /**
      * Generate a generic SIP Invite with Auth
-     * @param {string} seq 
+     * @param {number} seq 
      * @param {string} from 
      * @param {string} to 
      * @param {string} callid 
@@ -223,7 +224,7 @@ const hepModule = {
     },
     /**
      * Generates a 100 Trying for a SIP Invite
-     * @param {string} seq 
+     * @param {number} seq 
      * @param {string} from 
      * @param {string} to 
      * @param {string} callid 
@@ -261,7 +262,7 @@ const hepModule = {
     },
     /**
      * Generate 180 Ringing for a SIP Invite
-     * @param {string} seq
+     * @param {number} seq
      * @param {string} from
      * @param {string} to
      * @param {string} callid
@@ -303,7 +304,7 @@ const hepModule = {
     },
     /**
      * Generate a 200 OK for a SIP Invite
-     * @param {string} seq 
+     * @param {number} seq 
      * @param {string} from 
      * @param {string} to 
      * @param {string} callid 
@@ -362,7 +363,7 @@ const hepModule = {
     },
     /**
      * Generate a 403 Forbidden for a SIP Invite
-     * @param {string} seq 
+     * @param {number} seq 
      * @param {string} from 
      * @param {string} to 
      * @param {string} callid 
@@ -406,7 +407,7 @@ const hepModule = {
     },
     /**
      * Generate a 200 OK ACK for a SIP Invite
-     * @param {string} seq
+     * @param {number} seq
      * @param {string} from 
      * @param {string} to 
      * @param {string} callid 
@@ -433,7 +434,7 @@ const hepModule = {
     },
     /**
      * Generate a Periodic RTP report
-     * @param {string} seq
+     * @param {number} seq
      * @param {string} from 
      * @param {string} to 
      * @param {string} callid 
@@ -466,7 +467,7 @@ const hepModule = {
         rcinfoRaw.payload_type = 'JSON'
         rcinfoRaw.proto_type = 34
         rcinfoRaw.correlation_id = callid
-        rcinfoRaw.mos = parseInt(mediaInfo.mean_mos * 100)
+        rcinfoRaw.mos = mediaInfo.mean_mos * 100
         let datenow = new Date().getTime()
         rcinfoRaw.time_sec = Math.floor(datenow / 1000)
         rcinfoRaw.time_usec = (datenow - (rcinfoRaw.time_sec*1000))*1000
@@ -477,7 +478,7 @@ const hepModule = {
     },
     /**
      * Generate a Periodic RTCP report
-     * @param {string} seq
+     * @param {number} seq
      * @param {string} from 
      * @param {string} to 
      * @param {string} callid 
@@ -510,7 +511,7 @@ const hepModule = {
         rcinfoRaw.payload_type = 'JSON'
         rcinfoRaw.proto_type = 36
         rcinfoRaw.correlation_id = callid
-        rcinfoRaw.mos = parseInt(mediaInfo.mean_mos * 100)
+        rcinfoRaw.mos = mediaInfo.mean_mos * 100
         let datenow = new Date().getTime()
         rcinfoRaw.time_sec = Math.floor(datenow / 1000)
         rcinfoRaw.time_usec = (datenow - (rcinfoRaw.time_sec*1000))*1000
@@ -521,7 +522,7 @@ const hepModule = {
     },
     /**
      * Generate Hangup RTP report
-     * @param {string} seq
+     * @param {number} seq
      * @param {string} from 
      * @param {string} to 
      * @param {string} callid 
@@ -555,7 +556,7 @@ const hepModule = {
         rcinfoRaw.payload_type = 'JSON'
         rcinfoRaw.proto_type = 34
         rcinfoRaw.correlation_id = callid
-        rcinfoRaw.mos = parseInt(mediaInfo.mean_mos * 100)
+        rcinfoRaw.mos = mediaInfo.mean_mos * 100
         let datenow = new Date().getTime()
         rcinfoRaw.time_sec = Math.floor(datenow / 1000)
         rcinfoRaw.time_usec = (datenow - (rcinfoRaw.time_sec*1000))*1000
@@ -565,7 +566,7 @@ const hepModule = {
     },
     /**
      * Generate Hangup RTCP report
-     * @param {string} seq
+     * @param {number} seq
      * @param {string} from 
      * @param {string} to 
      * @param {string} callid 
@@ -599,7 +600,7 @@ const hepModule = {
         rcinfoRaw.payload_type = 'JSON'
         rcinfoRaw.proto_type = 34
         rcinfoRaw.correlation_id = callid
-        rcinfoRaw.mos = parseInt(mediaInfo.mean_mos * 100)
+        rcinfoRaw.mos = mediaInfo.mean_mos * 100
         let datenow = new Date().getTime()
         rcinfoRaw.time_sec = Math.floor(datenow / 1000)
         rcinfoRaw.time_usec = (datenow - (rcinfoRaw.time_sec*1000))*1000
@@ -609,7 +610,7 @@ const hepModule = {
     },
     /**
      * Generate Short Hangup RTP report
-     * @param {string} seq
+     * @param {number} seq
      * @param {string} from 
      * @param {string} to 
      * @param {string} callid 
@@ -643,7 +644,7 @@ const hepModule = {
         rcinfoRaw.payload_type = 'JSON'
         rcinfoRaw.proto_type = 35
         rcinfoRaw.correlation_id = callid
-        rcinfoRaw.mos = parseInt(mediaInfo.mean_mos * 100)
+        rcinfoRaw.mos = mediaInfo.mean_mos * 100
         let datenow = new Date().getTime()
         rcinfoRaw.time_sec = Math.floor(datenow / 1000)
         rcinfoRaw.time_usec = (datenow - (rcinfoRaw.time_sec*1000))*1000
@@ -653,7 +654,7 @@ const hepModule = {
     },
     /**
      * Generate Final RTP report
-     * @param {string} seq
+     * @param {number} seq
      * @param {string} from 
      * @param {string} to 
      * @param {string} callid 
@@ -687,7 +688,7 @@ const hepModule = {
         rcinfoRaw.payload_type = 'JSON'
         rcinfoRaw.proto_type = 34
         rcinfoRaw.correlation_id = callid
-        rcinfoRaw.mos = parseInt(Math.floor(mediaInfo.mean_mos * 100))
+        rcinfoRaw.mos = mediaInfo.mean_mos * 100
         let datenow = new Date().getTime()
         rcinfoRaw.time_sec = Math.floor(datenow / 1000)
         rcinfoRaw.time_usec = (datenow - (rcinfoRaw.time_sec*1000))*1000
@@ -697,7 +698,7 @@ const hepModule = {
     },
     /**
      * Generate a BYE message
-     * @param {string} seq
+     * @param {number} seq
      * @param {string} from 
      * @param {string} to 
      * @param {string} callid 
@@ -729,7 +730,7 @@ const hepModule = {
     },
     /**
      * Generate a 200 OK for a BYE message
-     * @param {string} seq
+     * @param {number} seq
      * @param {string} from 
      * @param {string} to 
      * @param {string} callid 

@@ -1,6 +1,7 @@
 /**
  * Load configuration from a JSON file.
- * @returns {Promise<{virtualInfrastructure: object}>}
+ * @returns {Promise<{name: string}[]>} The loaded configuration.
+ * @throws Will throw an error if the configuration cannot be loaded or if the 'normal' session type is missing.
  */
 async function loadConfig() {
     console.log("Loading configuration...");
@@ -14,6 +15,9 @@ async function loadConfig() {
             let exampleFileDescriptor = await Bun.file('./config.json.example');
             let exampleContent = await exampleFileDescriptor.text();
             console.log("Using example configuration:", JSON.parse(exampleContent));
+            /**
+             * @type {{name:string}[]}
+             */
             let config = JSON.parse(exampleContent);
             if (!config.find(s => s.name === "normal")) {
                 throw new Error("Configuration must include a 'normal' session type.");

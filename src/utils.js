@@ -1,6 +1,6 @@
 /**
  * Function to generate a Random String with x length
- * @param {integer} length 
+ * @param {number} length 
  * @returns 
  */
 function generateRandomString(length = 10) {
@@ -25,20 +25,20 @@ function generateRandomBranch() {
  * Function to generate a random interger between min and max
  * @param {number} min 
  * @param {number} max 
- * @returns {integer} Random Integer between min and max
+ * @returns {number} Random Integer between min and max
  */
 function getRandomInteger(min, max) {
-    return parseInt(Math.floor(Math.random() * (max - min + 1)) + min)
+    return Math.floor(Math.random() * (max - min + 1)) + min;
 }
 
 /**
  * Function to generate a random float between min and max
  * @param {number} min
  * @param {number} max
- * @returns {float} Random Float between min and max
+ * @returns {number} Random Float between min and max
  */
 function getRandomFloat(min, max) {
-    return parseFloat(parseFloat(Math.random() * (max - min) + min).toFixed(3))
+    return Math.floor((Math.random() * (max - min) + min) * 1000) / 1000;
 }
 
 /**
@@ -96,7 +96,7 @@ function getRandomCallId () {
 
 /**
  * Function to find the 'next' location in an array of locations.
- * @param {array} locations - An array of locations.
+ * @param {string[]} locations - An array of locations.
  * @param {string} currentLocation - The current location.
  * @returns {string} The next location in the array, or the current location if it's the last one.
  */
@@ -108,7 +108,7 @@ function getNextLocation(locations, currentLocation) {
 
 /**
  * Function to find the 'previous' location in an array of locations.
- * @param {array} locations - An array of locations.
+ * @param {string[]} locations - An array of locations.
  * @param {string} currentLocation - The current location.
  * @returns {string} The previous location in the array, or the current location if it's the first one.
  */
@@ -120,8 +120,8 @@ function getPreviousLocation(locations, currentLocation) {
 
 /**
  * Function to pick a random element from an array.
- * @param {Array} array - The array to pick from.
- * @returns {*} A random element from the array, or null if the array is empty.
+ * @param {string[]} array - The array to pick from.
+ * @returns {string|null} A random element from the array, or null if the array is empty.
  */
 function pickRandomElement(array) {
   if (!Array.isArray(array) || array.length === 0) {
