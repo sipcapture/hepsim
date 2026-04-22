@@ -11,13 +11,22 @@ It generates HEP and sends it based on defined callflows.
 
 ### Usage
 
-Simply run after modifying config.json file.    
+Copy `config.json.example` to `config.json` and modify as needed. If `config.json` is not found, the example configuration is used as a fallback.
 
-```js
-HEP_ADDRESS=127.0.0.1 PORT=9060 node index.js
+Run with [Bun](https://bun.sh):
+
+```sh
+HEP_ADDRESS=127.0.0.1 HEP_PORT=9060 bun index.js
 ```
 
-Utilize the example configuration for a view on how to use it. 
+#### Environment Variables
+
+| Variable        | Default     | Description                        |
+|-----------------|-------------|------------------------------------|
+| `HEP_ADDRESS`   | `127.0.0.1` | HEP receiver address               |
+| `HEP_PORT`      | `9060`      | HEP receiver port                  |
+| `HEP_TRANSPORT` | `udp`       | Transport protocol (`udp`)         |
+| `DEBUG`         | _(unset)_   | Enable debug session and logging   |
 
 The following callflows are available:
 * default - Simple SIP call with media
@@ -28,4 +37,34 @@ The following callflows are available:
 * timeout408 - A call based on default that receives a 408 as last response
 
 Other scenarios can easily be added by modifying the sessionModule.callFlows object and adding respective functions in the simulationModule.update and hepModule functions.
+
+### Docker
+
+A pre-built image is available on the GitHub Container Registry. Use the provided `docker-compose.yml` as a starting point:
+
+```yaml
+services:
+  hepsim:
+    image: ghcr.io/sipcapture/hepsim:0.7.2
+    container_name: hepsim
+    environment:
+      - HEP_ADDRESS=127.0.0.1
+      - HEP_PORT=9060
+      - HEP_TRANSPORT=udp
+    volumes:
+      - ./config.json:/app/config.json
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "2"
+```
+
+To build the image locally from the `Dockerfile`:
+
+```sh
+docker build -t hepsim .
+```
+
+The `Dockerfile` uses `oven/bun` as base image and compiles the project into a self-contained binary via `bun build --compile`.
 
