@@ -4,14 +4,27 @@ const connectionManager = {
     transport: process.env.HEP_TRANSPORT || 'udp',
     socket: null,
     debug: false,
-    mediator: {},
+    /**
+     * @type {import('./simulationModule.js').MediatorInterface}
+     */
+    mediator: {send: () => {}, subscribe: () => {}},
+    /**
+     * @param {string} data 
+     */
     sendData: function (data) {
         if (connectionManager.debug) console.log('No sender specified, cannot send data', data);
     },
+    /**
+     * @param {Error} err 
+     */
     errorHandler: (err) => {
         if (connectionManager.debug) console.log('Error sending HEP Packet')
         if (connectionManager.debug) console.log(err)
     },
+    /**
+     * 
+     * @param {{type: string, data: string, config: {}}} input 
+     */
     handleModuleMessage: (input) => {
         if (input.type === "sendData") {
             if (connectionManager.debug) console.log('Sending data through connection manager');
@@ -25,6 +38,11 @@ const connectionManager = {
             connectionManager.debug = true;
         }
     },
+    /**
+     * 
+     * @param {import('./simulationModule.js').MediatorInterface} mediator 
+     * @returns 
+     */
     establishConnection: async (mediator) => {
         connectionManager.mediator = mediator;
         connectionManager.mediator.subscribe(connectionManager.handleModuleMessage.bind(this));
@@ -53,16 +71,28 @@ const connectionManager = {
                 port: connectionManager.port,
 
                 socket: {
+                    /**
+                     * 
+                     * @param {WebSocket} socket 
+                     * @param {string} data 
+                     */
                     data(socket, data) {
                         // Handle incoming data
                         if (connectionManager.debug) console.log('Received data:', data);
                     },
+                    /**
+                     * @param {WebSocket} socket 
+                     */
                     open(socket) {
                         if (connectionManager.debug) console.log(`TCP socket connected to ${connectionManager.receiver}:${connectionManager.port}`);
                         connectionManager.sendData = (data) => {
                             socket.write(data);
                         };
                     },
+                    /**
+                     * @param {WebSocket} socket 
+                     * @param {Error} error 
+                     */
                     close(socket, error) {
                         if (error) {
                             console.error('Connection closed with error:', error);
@@ -72,21 +102,42 @@ const connectionManager = {
                             connectionManager.establishConnection(connectionManager.mediator);
                         }
                     },
+                    /**
+                     * 
+                     * @param {WebSocket} socket 
+                     */
                     drain(socket) {
                         if (connectionManager.debug) console.log('!!! Socket buffer drained');
                         connectionManager.mediator.send({type: 'unpause'});
                     },
+                    /**
+                     * 
+                     * @param {WebSocket} socket 
+                     * @param {Error} error 
+                     */
                     error(socket, error) {
                         console.error('Socket error:', error);
                     },
-                    // client-specific handlers
+                    /**
+                     * Client connection error handler
+                     * @param {WebSocket} socket 
+                     * @param {Error} error 
+                     */
                     connectError(socket, error) {
                         console.error('Connection error:', error);
-                    }, // connection failed
+                    },
+                    /**
+                     * Connection Failed or closed by server
+                     * @param {WebSocket} socket 
+                     */
                     end(socket) {
                         if (connectionManager.debug) console.log('Connection ended by server');
                         connectionManager.establishConnection(connectionManager.mediator);
-                    }, // connection closed by server
+                    },
+                    /**
+                     * Server connection timeout handler
+                     * @param {WebSocket} socket 
+                     */
                     timeout(socket) {
                         if (connectionManager.debug) console.log('Connection timed out');
                         connectionManager.establishConnection(connectionManager.mediator);
@@ -107,11 +158,16 @@ const connectionManager = {
             return false;
         }
     },
+    /**
+     * 
+     * @param {string} data 
+     * @returns 
+     */
     send: async (data) => {
         if (!connectionManager.socket) {
             console.error('Socket is not initialized, establishing connection...');
             try {
-                await connectionManager.establishConnection();
+                await connectionManager.establishConnection(connectionManager.mediator);
             } catch (error) {
                 console.error('Failed to establish connection:', error);
                 return;
