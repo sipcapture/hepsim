@@ -128,9 +128,7 @@ const sessionModule = {
                 console.log("No source IPs provided in config. Cannot generate session with RCInfo.");
                 return;
             }
-            if (!session.rcinfo) {
-                session.rcinfo = hepModule.generateRCInfo(14520, 'myhep', 1, session.callid, 1, sourceIP, '172.26.25.32', 5060, 5061);
-            }
+            session.rcinfo = hepModule.generateRCInfo(14520, 'myhep', 1, session.callid, 1, sourceIP, '172.26.25.32', 5060, 5061);
         } else if (config.name === "bad") {
             session = {
                 callid: utils.getRandomCallId(),
