@@ -24,6 +24,7 @@
   },
   "homepage": "https://github.com/Dletta/expsuehep#readme",
   "dependencies": {
-    "hep-js": "^1.0.20"
+    "@types/bun": "^1.3.14",
+    "hep-js": "^1.0.22"
   }
 }

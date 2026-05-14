@@ -59,7 +59,7 @@ const hepModule = {
      * @param {string} callid 
      * @param {RCINFO} rcinfo 
      * @param {MEDIAINFO} mediaInfo 
-     * @returns {string} Invite payload
+     * @returns {Buffer} Invite payload
      */
     generateInvite: function (seq, from, to, callid, rcinfo, mediaInfo) {
         let datenow = new Date().getTime()
@@ -69,8 +69,8 @@ const hepModule = {
         inviteRaw.push('INVITE sip:' + to + '@' + rcinfo.dstIp + ':' + rcinfo.dstPort + ' SIP/2.0\r\n')
         /* TODO Only add via when it's necessary */
         inviteRaw.push('Via: SIP/2.0/UDP ' + rcinfo.srcIp + ':' + rcinfo.srcPort + ';branch=' + utils.generateRandomBranch() + '\r\n')
-        inviteRaw.push('From: <sip:' + from + '@' + rcinfo.srcIp + ':' + rcinfo.srcPort + '>;tag=' + utils.generateRandomString(8) + '\r\n')
-        inviteRaw.push('To: <sip:' + to + '@' + rcinfo.dstIp + ':' + rcinfo.dstPort + '>\r\n')
+        inviteRaw.push('From: ' + from + ' <sip:' + from + '@' + rcinfo.srcIp + ':' + rcinfo.srcPort + '>;tag=' + utils.generateRandomString(8) + '\r\n')
+        inviteRaw.push('To: ' + to + ' <sip:' + to + '@' + rcinfo.dstIp + ':' + rcinfo.dstPort + '>\r\n')
         inviteRaw.push('Call-ID: ' + callid + '\r\n')
         inviteRaw.push('CSeq: ' + seq + ' INVITE\r\n')
         inviteRaw.push('Max-Forwards: 70 \r\n')
@@ -108,7 +108,7 @@ const hepModule = {
      * @param {string} to
      * @param {string} callid
      * @param {RCINFO} rcinfo
-     * @returns {string} 407 Proxy Authentication Required payload
+     * @returns {Buffer} 407 Proxy Authentication Required payload
      */
     generate407: function (seq, from, to, callid, rcinfo) {
         let datenow = new Date().getTime()
@@ -151,7 +151,7 @@ const hepModule = {
      * @param {string} to 
      * @param {string} callid 
      * @param {RCINFO} rcinfo 
-     * @returns 
+     * @returns {Buffer} Ack payload
      */
     generateAck407: function (seq, from, to, callid, rcinfo) {
         let datenow = new Date().getTime()
@@ -179,7 +179,7 @@ const hepModule = {
      * @param {string} callid 
      * @param {RCINFO} rcinfo 
      * @param {MEDIAINFO} mediaInfo 
-     * @returns {string} Invite payload
+     * @returns {Buffer} Invite payload
      */
     generateInviteAuth: function (seq, from, to, callid, rcinfo, mediaInfo) {
         let datenow = new Date().getTime()
@@ -229,7 +229,7 @@ const hepModule = {
      * @param {string} to 
      * @param {string} callid 
      * @param {RCINFO} rcinfo 
-     * @returns {string} 100 Trying payload
+     * @returns {Buffer} 100 Trying payload
      */
     generate100Trying: function (seq, from, to, callid, rcinfo) {
         let datenow = new Date().getTime()
@@ -267,7 +267,7 @@ const hepModule = {
      * @param {string} to
      * @param {string} callid
      * @param {RCINFO} rcinfo
-     * @return {string} 180 Ringing payload
+     * @return {Buffer} 180 Ringing payload
      */
     generate180Ringing: function (seq, from, to, callid, rcinfo) {
         let datenow = new Date().getTime()
@@ -310,7 +310,7 @@ const hepModule = {
      * @param {string} callid 
      * @param {RCINFO} rcinfo 
      * @param {MEDIAINFO} mediaInfo
-     * @returns {string} 200 OK payload
+     * @returns {Buffer} 200 OK payload
      */
     generate200OKInvite: function (seq, from, to, callid, rcinfo, mediaInfo) {
         let datenow = new Date().getTime()
@@ -369,7 +369,7 @@ const hepModule = {
      * @param {string} callid 
      * @param {RCINFO} rcinfo 
      * @param {MEDIAINFO} mediaInfo
-     * @returns {string} 403 Forbidden payload
+     * @returns {Buffer} 403 Forbidden payload
      */
     generate403: function (seq, from, to, callid, rcinfo, mediaInfo) {
         let datenow = new Date().getTime()
@@ -441,7 +441,7 @@ const hepModule = {
      * @param {RCINFO} rcinfo 
      * @param {MEDIAINFO} mediaInfo 
      * @param {boolean} reverse
-     * @returns {string} Short Report payload
+     * @returns {Buffer} Short Report payload
      */
     generatePeriodicReport: function (seq, from, to, callid, rcinfo, mediaInfo, reverse) {
         let rcinfoRaw = JSON.parse(JSON.stringify(rcinfo))
@@ -485,7 +485,7 @@ const hepModule = {
      * @param {RCINFO} rcinfo 
      * @param {MEDIAINFO} mediaInfo 
      * @param {boolean} reverse
-     * @returns {string} Periodic Report payload
+     * @returns {Buffer} Periodic Report payload
      */
     generatePeriodicReportRTCP: function (seq, from, to, callid, rcinfo, mediaInfo, reverse) {
         let rcinfoRaw = JSON.parse(JSON.stringify(rcinfo))
@@ -529,7 +529,7 @@ const hepModule = {
      * @param {RCINFO} rcinfo 
      * @param {MEDIAINFO} mediaInfo 
      * @param {boolean} reverse
-     * @returns {string} Hangup Report payload
+     * @returns {Buffer} Hangup Report payload
      */
     generateHangupReport: function (seq, from, to, callid, rcinfo, mediaInfo, reverse) {
         let rcinfoRaw = JSON.parse(JSON.stringify(rcinfo))
@@ -573,7 +573,7 @@ const hepModule = {
      * @param {RCINFO} rcinfo 
      * @param {MEDIAINFO} mediaInfo 
      * @param {boolean} reverse
-     * @returns {string} Hangup Report payload
+     * @returns {Buffer} Hangup Report payload
      */
     generateHangupReportRTCP: function (seq, from, to, callid, rcinfo, mediaInfo, reverse) {
         let rcinfoRaw = JSON.parse(JSON.stringify(rcinfo))
@@ -617,7 +617,7 @@ const hepModule = {
      * @param {RCINFO} rcinfo 
      * @param {MEDIAINFO} mediaInfo 
      * @param {boolean} reverse
-     * @returns {string} Hangup Report payload
+     * @returns {Buffer} Hangup Report payload
      */
     generateShortHangupReport: function (seq, from, to, callid, rcinfo, mediaInfo, reverse) {
         let rcinfoRaw = JSON.parse(JSON.stringify(rcinfo))
@@ -661,7 +661,7 @@ const hepModule = {
      * @param {RCINFO} rcinfo 
      * @param {MEDIAINFO} mediaInfo 
      * @param {boolean} reverse
-     * @returns {string} Final Report payload
+     * @returns {Buffer} Final Report payload
      */
     generateFinalReport: function (seq, from, to, callid, rcinfo, mediaInfo, reverse) {
         let rcinfoRaw = JSON.parse(JSON.stringify(rcinfo))
@@ -703,7 +703,7 @@ const hepModule = {
      * @param {string} to 
      * @param {string} callid 
      * @param {RCINFO} rcinfo
-     * @returns {string} BYE payload
+     * @returns {Buffer} BYE payload
      */
     generateBye: function (seq, from, to, callid, rcinfo) {
         let datenow = new Date().getTime()
@@ -735,7 +735,7 @@ const hepModule = {
      * @param {string} to 
      * @param {string} callid 
      * @param {RCINFO} rcinfo
-     * @returns {string} 200 OK BYE payload
+     * @returns {Buffer} 200 OK BYE payload
      */
     generate200OKBye: function (seq, from, to, callid, rcinfo) {
         let datenow = new Date().getTime()
