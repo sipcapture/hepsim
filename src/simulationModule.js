@@ -140,7 +140,7 @@ const simulationModule = {
      *
      */
     tick: async () => {
-        if (Date.now() - simulationModule.previous > 50) { //50 ms per tick default; 1000 for debug
+        if (Date.now() - simulationModule.previous > 20) { //20 ms per tick default; 1000 for debug
             if (simulationModule.debug) console.log("🔄 Simulation tick at", new Date().toISOString());
             simulationModule.mediator.send({type: "tick"});
             simulationModule.previous = Date.now();
