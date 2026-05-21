@@ -10,6 +10,10 @@ import sessionModule from './sessionModule.js';
  */
 
 /**
+ * @typedef {{name: string, cps_high?: number, interval?: number, count?: number}} SimulationConfig
+ */
+
+/**
  * @typedef MediatorInterface
  * @type {{send: function, subscribe: function}}
  */
@@ -28,22 +32,16 @@ const simulationModule = {
      */
     mediator: {send: () => {}, subscribe: () => {}},
     /**
-     * @type {{name: string}[]}
+     * @type {SimulationConfig[]|undefined}
      * @property {function} find - Find a configuration by name
      */
-    configuration: [],
-    /**
-     * @type {{cps_high: number, interval: number}}
-     */
-    normalConfig: {cps_high: 10, interval: 60},
-    /**
-     * @type {{count: number, interval: number}}
-     */
-    badConfig: {interval: 300, count: 5},
-    /**
-     * @type {{interval: number, count: number}}
-     */
-    unAuthorizedConfig: {interval: 300, count: 5},
+    configuration: [{name: "normal", cps_high: 10, interval: 60}],
+    /** @type {SimulationConfig} */
+    normalConfig: {name: "normal", cps_high: 10, interval: 60},
+    /** @type {SimulationConfig} */
+    badConfig: {name: "bad", interval: 300, count: 5},
+    /** @type {SimulationConfig} */
+    unAuthorizedConfig: {name: "unauthorized", interval: 300, count: 5},
     /**
      * 
      * @param {MediatorInterface} mediator 
@@ -120,14 +118,26 @@ const simulationModule = {
     runSimulation: async () => {
         /* Normal call flows */
         let normalConfig = simulationModule.configuration.find((s => s.name === "normal"));
+        if (!normalConfig) {
+            console.error("No 'normal' configuration found. Simulation cannot run.");
+            return;
+        }
         simulationModule.normalConfig = normalConfig;
         setTimeout(simulationModule.normalTick, simulationModule.getAdjustedDelay(simulationModule.normalConfig.cps_high));
         /* Bad MOS calls */
         let badConfig = simulationModule.configuration.find((s => s.name === "bad"));
+        if (!badConfig) {
+            console.error("No 'bad' configuration found. Simulation cannot run.");
+            return;
+        }
         simulationModule.badConfig = badConfig;
         setTimeout(simulationModule.badTick, (simulationModule.badConfig.interval * 1000) + utils.getRandomInteger(0, 600000));
         /* Unauthorized calls */
         let unAuthorizedConfig = simulationModule.configuration.find((s => s.name === "403"));
+        if (!unAuthorizedConfig) {
+            console.error("No '403' configuration found. Simulation cannot run.");
+            return;
+        }
         simulationModule.unAuthorizedConfig = unAuthorizedConfig;
         setTimeout(simulationModule.unAuthorizedTick, (simulationModule.unAuthorizedConfig.interval * 1000) + utils.getRandomInteger(0, 120000));
         /* Simulation ticks to Session Module */

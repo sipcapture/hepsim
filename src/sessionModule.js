@@ -32,6 +32,9 @@ const sessionModule = {
     stopped: false,
     paused: false,
     debug: false,
+    /**
+     * @type {Map<string, string>}
+     */
     flowMap: new Map(),
     /**
      * Initializes the session module with the given mediator and configuration.

@@ -18,6 +18,10 @@ import * as hepJs from 'hep-js';
  * @type { {mos: number, mean_mos: number, jitter: number, mean_jitter: number, packetloss: number, mean_rfactor: number, direction: number, srcPort: number, dstPort: number, tl_bytes: number, total_packets: number, max_jitter: number, min_mos: number, lastReport: number, global_packets: number, global_packetloss: number, rtpstart: number, rtpend: number, global_bytes: number} }
  */
 
+/**
+ * HepModule: Module for generating HEP payloads for SIP and RTP/RTCP reports
+ * @type {{generateRCInfo:function, generateInvite:function, generate407:function, generateAck407:function, generateInviteAuth:function, generate100Trying:function, generate180Ringing:function, generate200OKInvite:function, generate403:function, generate200OKAck:function, generatePeriodicReport:function, generatePeriodicReportRTCP:function, generateHangupReport:function, generateHangupReportRTCP: function, generateShortHangupReport:function, generateFinalReport:function, generateBye:function, generate200OKBye:function}} 
+ */
 const hepModule = {
     /**
      * Generate RCInfo Object for HEP

@@ -1,3 +1,7 @@
+/**
+ * Connection Manager Module: Handles the connection to the HEP receiver and manages sending data over UDP or TCP
+ * @type {{receiver: string, port: number, transport: string, socket: Bun.Socket<undefined> | Bun.udp.ConnectedSocket<"buffer"> | WebSocket | null, debug: boolean, mediator: import('./simulationModule.js').MediatorInterface, sendData: function(string): void, errorHandler: function(Error): void, handleModuleMessage: function({type: string, data: string, config: {}}): void, establishConnection: function(import('./simulationModule.js').MediatorInterface): Promise<boolean>, send: function(string): Promise<void>}}
+ */
 const connectionManager = {
     receiver: process.env.HEP_ADDRESS || '127.0.0.1',
     port: parseInt(process.env.HEP_PORT) || 9060,
@@ -71,28 +75,16 @@ const connectionManager = {
                 port: connectionManager.port,
 
                 socket: {
-                    /**
-                     * 
-                     * @param {WebSocket} socket 
-                     * @param {string} data 
-                     */
                     data(socket, data) {
                         // Handle incoming data
                         if (connectionManager.debug) console.log('Received data:', data);
                     },
-                    /**
-                     * @param {WebSocket} socket 
-                     */
                     open(socket) {
                         if (connectionManager.debug) console.log(`TCP socket connected to ${connectionManager.receiver}:${connectionManager.port}`);
                         connectionManager.sendData = (data) => {
                             socket.write(data);
                         };
                     },
-                    /**
-                     * @param {WebSocket} socket 
-                     * @param {Error} error 
-                     */
                     close(socket, error) {
                         if (error) {
                             console.error('Connection closed with error:', error);
@@ -102,42 +94,20 @@ const connectionManager = {
                             connectionManager.establishConnection(connectionManager.mediator);
                         }
                     },
-                    /**
-                     * 
-                     * @param {WebSocket} socket 
-                     */
                     drain(socket) {
                         if (connectionManager.debug) console.log('!!! Socket buffer drained');
                         connectionManager.mediator.send({type: 'unpause'});
                     },
-                    /**
-                     * 
-                     * @param {WebSocket} socket 
-                     * @param {Error} error 
-                     */
                     error(socket, error) {
                         console.error('Socket error:', error);
                     },
-                    /**
-                     * Client connection error handler
-                     * @param {WebSocket} socket 
-                     * @param {Error} error 
-                     */
                     connectError(socket, error) {
                         console.error('Connection error:', error);
                     },
-                    /**
-                     * Connection Failed or closed by server
-                     * @param {WebSocket} socket 
-                     */
                     end(socket) {
                         if (connectionManager.debug) console.log('Connection ended by server');
                         connectionManager.establishConnection(connectionManager.mediator);
                     },
-                    /**
-                     * Server connection timeout handler
-                     * @param {WebSocket} socket 
-                     */
                     timeout(socket) {
                         if (connectionManager.debug) console.log('Connection timed out');
                         connectionManager.establishConnection(connectionManager.mediator);

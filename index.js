@@ -45,7 +45,7 @@ oldSessionModule.callFlows = {
 
 /**
  * @typedef CONFIG
- * @type {{scenarios: SCENARIO[], virtualInfrastructure: {namedString: {type: string, ip: string}}}}
+ * @type {{scenarios: import('./src/simulationModule.js').SimulationConfig[], virtualInfrastructure: {namedString: {type: string, ip: string}}}}
  */
 
 /**
