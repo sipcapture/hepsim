@@ -214,7 +214,7 @@ const sessionModule = {
                     // console.log("checking: ", session.previous, Date.now(), session.previous - Date.now(), session.duration, session.targetDuration);
                     /* Handle Media */
                     if (session.duration >= session.targetDuration) {
-                        return;
+                        continue;
                     } else {
                         session.state.unshift('MEDIA');
                         if ((Date.now() - session.previous) > 30000) { // every 30 seconds
