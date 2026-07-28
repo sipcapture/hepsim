@@ -1,4 +1,5 @@
 import * as utils from './utils.js';
+// @ts-ignore
 import * as hepJs from 'hep-js';
 
 /** TYPE DEFINITIONS */
@@ -102,6 +103,7 @@ const hepModule = {
         inviteRaw.push('a=fmtp:101 0-15\r\n')
         inviteRaw.push('\r\n\r\n')
     
+        // @ts-ignore
         return hepJs.encapsulate(inviteRaw.join(''), rcinfo)
     },
     /**
@@ -145,6 +147,7 @@ const hepModule = {
         raw407.push('Content-Length: 0\r\n')
         raw407.push('\r\n\r\n')
     
+        // @ts-ignore
         return hepJs.encapsulate(raw407.join(''), rcinfo)
     },
     /**
@@ -172,6 +175,7 @@ const hepModule = {
         rawAck407.push('Content-Length: 0')
         rawAck407.push('\r\n\r\n')
     
+        // @ts-ignore
         return hepJs.encapsulate(rawAck407.join(''), rcinfo)
     },
     /**
@@ -223,6 +227,7 @@ const hepModule = {
         inviteRaw.push('a=fmtp:101 0-15\r\n')
         inviteRaw.push('\r\n\r\n')
     
+        // @ts-ignore
         return hepJs.encapsulate(inviteRaw.join(''), rcinfo)
     },
     /**
@@ -261,6 +266,7 @@ const hepModule = {
         raw100Trying.push('Content-Length: 0\r\n')
         raw100Trying.push('\r\n\r\n')
     
+        // @ts-ignore
         return hepJs.encapsulate(raw100Trying.join(''), rcinfo)
     },
     /**
@@ -303,6 +309,7 @@ const hepModule = {
         raw180Ringing.push('Content-Length: 0\r\n')
         raw180Ringing.push('\r\n\r\n')
     
+        // @ts-ignore
         return hepJs.encapsulate(raw180Ringing.join(''), rcinfo)
     },
     /**
@@ -362,6 +369,7 @@ const hepModule = {
         raw200OK.push('a=sendrecv\r\n')
         raw200OK.push('\r\n\r\n')
     
+        // @ts-ignore
         return hepJs.encapsulate(raw200OK.join(''), rcinfo)
     },
     /**
@@ -374,6 +382,7 @@ const hepModule = {
      * @param {MEDIAINFO} mediaInfo
      * @returns {Buffer} 403 Forbidden payload
      */
+    // @ts-ignore
     generate403: function (seq, from, to, callid, rcinfo, mediaInfo) {
         let datenow = new Date().getTime()
         rcinfo = Object.assign({}, rcinfo) // Create a shallow copy to avoid mutating the original
@@ -406,6 +415,7 @@ const hepModule = {
         raw403.push('Content-Length: 0\r\n')
         raw403.push('\r\n\r\n')
     
+        // @ts-ignore
         return hepJs.encapsulate(raw403.join(''), rcinfo)
     },
     /**
@@ -433,6 +443,7 @@ const hepModule = {
         raw200OKAck.push('Content-Length: 0\r\n')
         raw200OKAck.push('\r\n\r\n')
     
+        // @ts-ignore
         return hepJs.encapsulate(raw200OKAck.join(''), rcinfo)
     },
     /**
@@ -446,6 +457,7 @@ const hepModule = {
      * @param {boolean} reverse
      * @returns {Buffer} Short Report payload
      */
+    // @ts-ignore
     generatePeriodicReport: function (seq, from, to, callid, rcinfo, mediaInfo, reverse) {
         let rcinfoRaw = JSON.parse(JSON.stringify(rcinfo))
         let src, dst, sport, dport, dir
@@ -489,6 +501,7 @@ const hepModule = {
      * @param {boolean} reverse
      * @returns {Buffer} Periodic Report payload
      */
+    // @ts-ignore
     generatePeriodicReportRTCP: function (seq, from, to, callid, rcinfo, mediaInfo, reverse) {
         let rcinfoRaw = JSON.parse(JSON.stringify(rcinfo))
         let src, dst, sport, dport, dir
@@ -532,6 +545,7 @@ const hepModule = {
      * @param {boolean} reverse
      * @returns {Buffer} Hangup Report payload
      */
+    // @ts-ignore
     generateHangupReport: function (seq, from, to, callid, rcinfo, mediaInfo, reverse) {
         let rcinfoRaw = JSON.parse(JSON.stringify(rcinfo))
         let src, dst, sport, dport, dir
@@ -575,6 +589,7 @@ const hepModule = {
      * @param {boolean} reverse
      * @returns {Buffer} Hangup Report payload
      */
+    // @ts-ignore
     generateHangupReportRTCP: function (seq, from, to, callid, rcinfo, mediaInfo, reverse) {
         let rcinfoRaw = JSON.parse(JSON.stringify(rcinfo))
         let src, dst, sport, dport, dir
@@ -618,6 +633,7 @@ const hepModule = {
      * @param {boolean} reverse
      * @returns {Buffer} Hangup Report payload
      */
+    // @ts-ignore
     generateShortHangupReport: function (seq, from, to, callid, rcinfo, mediaInfo, reverse) {
         let rcinfoRaw = JSON.parse(JSON.stringify(rcinfo))
         let src, dst, sport, dport, dir
@@ -661,6 +677,7 @@ const hepModule = {
      * @param {boolean} reverse
      * @returns {Buffer} Final Report payload
      */
+    // @ts-ignore
     generateFinalReport: function (seq, from, to, callid, rcinfo, mediaInfo, reverse) {
         let rcinfoRaw = JSON.parse(JSON.stringify(rcinfo))
         let src, dst, sport, dport, dir
@@ -702,6 +719,7 @@ const hepModule = {
      * @param {RCINFO} rcinfo
      * @returns {Buffer} BYE payload
      */
+    // @ts-ignore
     generateBye: function (seq, from, to, callid, rcinfo) {
         let datenow = new Date().getTime()
         rcinfo.timeSeconds = Math.floor(datenow / 1000)
@@ -723,6 +741,7 @@ const hepModule = {
         rawBye.push('Content-Length: 0\r\n')
         rawBye.push('\r\n\r\n')
     
+        // @ts-ignore
         return hepJs.encapsulate(rawBye.join(''), rcinfo)
     },
     /**
@@ -734,6 +753,7 @@ const hepModule = {
      * @param {RCINFO} rcinfo
      * @returns {Buffer} 200 OK BYE payload
      */
+    // @ts-ignore
     generate200OKBye: function (seq, from, to, callid, rcinfo) {
         let datenow = new Date().getTime()
         rcinfo = Object.assign({}, rcinfo) // Create a shallow copy to avoid mutating the original
@@ -762,6 +782,7 @@ const hepModule = {
         raw200OKBye.push('P-Out-Socket: udp:' + rcinfo.dstIp + ':' + rcinfo.dstPort + '\r\n')
         raw200OKBye.push('\r\n\r\n')
 
+        // @ts-ignore
         return hepJs.encapsulate(raw200OKBye.join(''), rcinfo)
     },
 }
