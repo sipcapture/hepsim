@@ -5,8 +5,9 @@
  */
 async function loadConfig() {
     console.log("Loading configuration...");
+    let configPath = process.env.CONFIG_PATH || './config.json'
     try {
-        let fileDescriptor = await Bun.file('./config.json');
+        let fileDescriptor = await Bun.file(configPath);
         if (await fileDescriptor.exists()) {
             let configContent = await fileDescriptor.text();
             console.log("Using configuration:", JSON.parse(configContent));
