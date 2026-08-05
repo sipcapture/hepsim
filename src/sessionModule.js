@@ -120,8 +120,14 @@ const sessionModule = {
                     packetloss: 0, 
                     global_packetloss: 0,
                     mean_rfactor: 90, 
-                    direction: 0
+                    direction: 0,
+                    reportCount: 1,
+                    lastReport: 0,
+                    rtpstart: 0,
+                    rtpend: 0
                 },
+                rcinfo: null,
+                previous: null
             };
             /**
              * @type {string|null}
@@ -161,7 +167,11 @@ const sessionModule = {
                     packetloss: 0, 
                     global_packetloss: 0,
                     mean_rfactor: 70, 
-                    direction: 0
+                    direction: 0,
+                    reportCount: 1,
+                    lastReport: 0,
+                    rtpstart: 0,
+                    rtpend: 0
                 },
             };
             let sourceIP = utils.pickRandomElement(config.ips);
@@ -223,10 +233,11 @@ const sessionModule = {
                             let jitter = utils.getRandomFloat(session.jitter_range[0], session.jitter_range[1])
                             let packetloss = utils.getRandomInteger(session.packetloss_range[0], session.packetloss_range[1])
                             session.mediaInfo.mos = mos
-                            session.mediaInfo.mean_mos = Math.round((session.mediaInfo.mean_mos + mos) * 1000) / 1000
+                            session.mediaInfo.reportCount = (session.mediaInfo.reportCount || 1) + 1
+                            session.mediaInfo.mean_mos = Math.round(((session.mediaInfo.mean_mos * (session.mediaInfo.reportCount - 1)) + mos) / session.mediaInfo.reportCount * 1000) / 1000
                             if (mos < session.mediaInfo.min_mos) session.mediaInfo.min_mos = mos
                             session.mediaInfo.jitter = jitter
-                            session.mediaInfo.mean_jitter = Math.round((session.mediaInfo.mean_jitter + jitter) * 1000) / 1000
+                            session.mediaInfo.mean_jitter = Math.round(((session.mediaInfo.mean_jitter * (session.mediaInfo.reportCount - 1)) + jitter) / session.mediaInfo.reportCount * 1000) / 1000
                             if (jitter > session.mediaInfo.max_jitter) session.mediaInfo.max_jitter = jitter
                             session.mediaInfo.total_packets += utils.getRandomInteger(400, 550) // assume 1 packet per second
                             session.mediaInfo.global_packets += session.mediaInfo.total_packets
