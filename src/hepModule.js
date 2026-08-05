@@ -6,7 +6,7 @@ import * as hepJs from 'hep-js';
 
 /**
  * @typedef RCINFO
- * @type {{payloadType: number, captureId: number, capturePass: string, protocolFamily: number, protocol: number, proto_type: number, correlation_id: string, srcIp: string, dstIp: string, srcPort: number, dstPort: number, hepNodeName: string, timeSeconds: number, timeUseconds: number}}
+ * @type {{payloadType: number, captureId: number, capturePass: string, protocolFamily: number, protocol: number, proto_type: number, correlation_id: string, srcIp: string, dstIp: string, srcPort: number, dstPort: number, hepNodeName: string, timeSeconds: number, timeUseconds: number, direction?: number, mos?: number}}
  */
 
 /**
@@ -16,7 +16,7 @@ import * as hepJs from 'hep-js';
 
 /**
  * @typedef MEDIAINFO
- * @type { {mos: number, mean_mos: number, jitter: number, mean_jitter: number, packetloss: number, mean_rfactor: number, direction: number, srcPort: number, dstPort: number, tl_bytes: number, total_packets: number, max_jitter: number, min_mos: number, lastReport: number, global_packets: number, global_packetloss: number, rtpstart: number, rtpend: number, global_bytes: number} }
+ * @type { {mos: number, mean_mos: number, jitter: number, mean_jitter: number, packetloss: number, mean_rfactor: number, direction: number, srcPort: number, dstPort: number, tl_bytes: number, total_packets: number, max_jitter: number, min_mos: number, lastReport: number, global_packets: number, global_packetloss: number, rtpstart: number, rtpend: number, global_bytes: number, reportCount: number} }
  */
 
 /**
@@ -66,6 +66,7 @@ const hepModule = {
      * @returns {Buffer} Invite payload
      */
     generateInvite: function (seq, from, to, callid, rcinfo, mediaInfo) {
+        rcinfo = Object.assign({}, rcinfo)
         let datenow = new Date().getTime()
         rcinfo.timeSeconds = Math.floor(datenow / 1000)
         rcinfo.timeUseconds = (datenow - (rcinfo.timeSeconds*1000)) * 1000
@@ -160,6 +161,7 @@ const hepModule = {
      * @returns {Buffer} Ack payload
      */
     generateAck407: function (seq, from, to, callid, rcinfo) {
+        rcinfo = Object.assign({}, rcinfo)
         let datenow = new Date().getTime()
         rcinfo.timeSeconds = Math.floor(datenow / 1000)
         rcinfo.timeUseconds = (datenow - (rcinfo.timeSeconds*1000))*1000
@@ -189,6 +191,7 @@ const hepModule = {
      * @returns {Buffer} Invite payload
      */
     generateInviteAuth: function (seq, from, to, callid, rcinfo, mediaInfo) {
+        rcinfo = Object.assign({}, rcinfo)
         let datenow = new Date().getTime()
         rcinfo.timeSeconds = Math.floor(datenow / 1000)
         rcinfo.timeUseconds = (datenow - (rcinfo.timeSeconds*1000)) * 1000
@@ -240,6 +243,7 @@ const hepModule = {
      * @returns {Buffer} 100 Trying payload
      */
     generate100Trying: function (seq, from, to, callid, rcinfo) {
+        rcinfo = Object.assign({}, rcinfo)
         let datenow = new Date().getTime()
         rcinfo = Object.assign({}, rcinfo) // Create a shallow copy to avoid mutating the original
         /* Switch Direction */
@@ -427,6 +431,7 @@ const hepModule = {
      * @param {RCINFO} rcinfo 
      */
     generate200OKAck: function (seq, from, to, callid, rcinfo) {
+        rcinfo = Object.assign({}, rcinfo)
         let datenow = new Date().getTime()
         rcinfo.timeSeconds = Math.floor(datenow / 1000)
         rcinfo.timeUseconds = (datenow - (rcinfo.timeSeconds*1000))*1000
@@ -459,7 +464,7 @@ const hepModule = {
      */
     // @ts-ignore
     generatePeriodicReport: function (seq, from, to, callid, rcinfo, mediaInfo, reverse) {
-        let rcinfoRaw = JSON.parse(JSON.stringify(rcinfo))
+        let rcinfoRaw = Object.assign({}, rcinfo)
         let src, dst, sport, dport, dir
         if (!reverse) {
             src = rcinfoRaw.srcIp
@@ -488,6 +493,7 @@ const hepModule = {
         
         let rawShortReport = `{"CORRELATION_ID":"${callid}","RTP_SIP_CALL_ID":"${callid}","DELTA":${utils.getRandomFloat(0.001, 0.098)},"JITTER":${mediaInfo.jitter},"REPORT_TS":${new Date().getTime()*1000},"TL_BYTE":${mediaInfo.tl_bytes},"TOTAL_PK":${mediaInfo.total_packets},"EXPECTED_PK":${mediaInfo.total_packets + mediaInfo.packetloss},"PACKET_LOSS":${mediaInfo.packetloss},"SEQ":0,"MAX_JITTER":${mediaInfo.max_jitter},"MAX_DELTA":${utils.getRandomInteger(200, 2100)},"MAX_SKEW":0.172,"MEAN_JITTER":${mediaInfo.mean_jitter},"MIN_MOS":${mediaInfo.min_mos},"MEAN_MOS":${mediaInfo.mean_mos},"MOS":${mediaInfo.mos},"RFACTOR":80.200,"MIN_RFACTOR":80.200,"MEAN_RFACTOR":80.200,"SRC_IP":"${src}","SRC_PORT":${sport},"DST_IP":"${dst}","DST_PORT":${dport},"SRC_MAC":"00-30-48-7E-5D-C6","DST_MAC":"00-12-80-D7-38-5E","OUT_ORDER":0,"SSRC":"0xf1c6261","SSRC_CHG":0,"CODEC_PT":9,"CLOCK":8000,"CODEC_NAME":"G722","CODEC_CHANNEL":1,"DIR":0,"ONE_WAY_RTP":0,"REPORT_NAME":"${src}-${sport}","PARTY":${dir},"STYPE":"hepagent-rtp-1.1.133","TYPE":"PERIODIC","REPORT_START":${mediaInfo.lastReport},"REPORT_END":${Math.floor(Date.now() / 1000)},"SOURCE":"RTP"}`
     
+        // @ts-ignore
         return hepJs.encapsulate(rawShortReport, rcinfoRaw)
     },
     /**
