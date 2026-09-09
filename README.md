@@ -25,7 +25,7 @@ HEP_ADDRESS=127.0.0.1 HEP_PORT=9060 bun index.js
 |-----------------|-------------|------------------------------------|
 | `HEP_ADDRESS`   | `127.0.0.1` | HEP receiver address               |
 | `HEP_PORT`      | `9060`      | HEP receiver port                  |
-| `HEP_TRANSPORT` | `udp`       | Transport protocol (`udp`)         |
+| `HEP_TRANSPORT` | `udp`       | Transport protocol (`udp` or `tcp`). Under backpressure, HEP packets are queued and session progress pauses until the socket drains. |
 | `MEDIA_HEP`     | `true`      | When `false`, skip sending media RTP/RTCP HEP reports (calculation and media timeouts still run) |
 | `DEBUG`         | _(unset)_   | Enable debug session and logging   |
 

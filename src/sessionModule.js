@@ -65,7 +65,7 @@ const sessionModule = {
      */
     receiveInput: (input) => {
         if (input.type === "newSession") {
-            if (!sessionModule.stopped) sessionModule.createSession(input.config);
+            if (!sessionModule.stopped && !sessionModule.paused) sessionModule.createSession(input.config);
         } else if (input.type === "stop") {
             sessionModule.stopped = true;
         } else if (input.type === "tick") {
