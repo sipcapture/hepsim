@@ -25,5 +25,41 @@
         "ips": ["186.30.1.125", "184.125.22.123", "156.152.10.1", "125.2.35.120"],
         "interval": 240,
         "count": 50
+    },
+    {
+        "name": "dual_capture",
+        "ips": ["128.12.26.32"],
+        "interval": 240,
+        "count": 5,
+        "max_duration": 250000,
+        "min_duration": 160000,
+        "mos_range": [4.2, 4.4],
+        "jitter_range": [0.8, 1.2],
+        "packetloss_range": [0, 1],
+        "capture_ids": [14520, 14521]
+    },
+    {
+        "name": "mos_dip",
+        "ips": ["128.12.26.32"],
+        "interval": 240,
+        "count": 5,
+        "max_duration": 250000,
+        "min_duration": 160000,
+        "mos_range": [4.2, 4.4],
+        "mos_good": [4.2, 4.2],
+        "mos_dip": [2.0, 2.0],
+        "jitter_range": [0.8, 1.2],
+        "packetloss_range": [0, 1]
+    },
+    {
+        "name": "one_way",
+        "ips": ["128.12.26.32"],
+        "interval": 240,
+        "count": 5,
+        "max_duration": 250000,
+        "min_duration": 160000,
+        "mos_range": [4.2, 4.4],
+        "jitter_range": [0.8, 1.2],
+        "packetloss_range": [0, 1]
     }
 ]

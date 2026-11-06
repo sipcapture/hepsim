@@ -33,7 +33,6 @@ const simulationModule = {
     mediator: {send: () => {}, subscribe: () => {}},
     /**
      * @type {SimulationConfig[]|undefined}
-     * @property {function} find - Find a configuration by name
      */
     configuration: [{name: "normal", cps_high: 10, interval: 60}],
     /** @type {SimulationConfig} */
@@ -42,10 +41,15 @@ const simulationModule = {
     badConfig: {name: "bad", interval: 300, count: 5},
     /** @type {SimulationConfig} */
     unAuthorizedConfig: {name: "unauthorized", interval: 300, count: 5},
+    /** @type {SimulationConfig|null} */
+    dualCaptureConfig: null,
+    /** @type {SimulationConfig|null} */
+    mosDipConfig: null,
+    /** @type {SimulationConfig|null} */
+    oneWayConfig: null,
     /**
-     * 
-     * @param {MediatorInterface} mediator 
-     * @param {{name: string}[]} configuration 
+     * @param {MediatorInterface} mediator
+     * @param {{name: string}[]} configuration
      */
     initialize: async (mediator, configuration) => {
         simulationModule.mediator = mediator;
@@ -55,8 +59,7 @@ const simulationModule = {
         console.log("Simulation module initialized with configuration:", configuration, simulationModule.mediator);
     },
     /**
-     * 
-     * @param {{type: string, config: {name: string}}} input 
+     * @param {{type: string, config: {name: string}}} input
      */
     receiveInput: (input) => {
         if (input.type === "stop") {
@@ -70,20 +73,38 @@ const simulationModule = {
         }
     },
     getAdjustmentFactor: () => {
-        // Adjust the CPS based on the time of day
         let now = new Date();
         let highPeakStart = new Date();
         highPeakStart.setUTCHours(11, 0, 0, 0);
-        let randomization = Math.random() * 2000; // add some randomness into the timing
+        let randomization = Math.random() * 2000;
         return Math.abs((now.getTime() - highPeakStart.getTime()) + randomization) / 1000 / 60 / 60 ;
     },
     /**
-     * 
-     * @param {number} CPS 
-     * @returns 
+     * @param {number} CPS
+     * @returns {number}
      */
     getAdjustedDelay: (CPS) => {
         return (simulationModule.getAdjustmentFactor() * 1000) / CPS;
+    },
+    /**
+     * Interval+count burst tick used by 403-style scenarios.
+     * @param {() => SimulationConfig|null|undefined} getConfig
+     * @param {string} label
+     * @param {number} extraJitterMs
+     */
+    makeIntervalTick: (getConfig, label, extraJitterMs) => {
+        const tick = async () => {
+            if (simulationModule.simulationStopped) return;
+            const config = getConfig();
+            if (!config || !config.interval || !config.count) return;
+            console.log(`🕒 ${label} tick at`, new Date().toISOString());
+            for (let i = 0; i < config.count; i++) {
+                simulationModule.mediator.send({type: "newSession", config});
+                await Bun.sleep(300);
+            }
+            setTimeout(tick, (config.interval * 1000) + utils.getRandomInteger(0, extraJitterMs));
+        };
+        return tick;
     },
     normalTick: async () => {
         if (!simulationModule.simulationStopped) {
@@ -97,7 +118,7 @@ const simulationModule = {
             console.log("🕒 Bad tick at", new Date().toISOString());
             for (let i = 0; i < simulationModule.badConfig.count; i++) {
                 simulationModule.mediator.send({type: "newSession", config: simulationModule.badConfig});
-                await Bun.sleep(300); // slight delay between bad calls to avoid bursts
+                await Bun.sleep(300);
             }
             setTimeout(simulationModule.badTick, (simulationModule.badConfig.interval * 1000) + utils.getRandomInteger(0, 600000));
         }
@@ -107,16 +128,18 @@ const simulationModule = {
             console.log("🕒 Unauthorized tick at", new Date().toISOString());
             for (let i = 0; i < simulationModule.unAuthorizedConfig.count; i++) {
                 simulationModule.mediator.send({type: "newSession", config: simulationModule.unAuthorizedConfig});
-                await Bun.sleep(300); // slight delay between bad calls to avoid bursts
+                await Bun.sleep(300);
             }
             setTimeout(simulationModule.unAuthorizedTick, (simulationModule.unAuthorizedConfig.interval * 1000) + utils.getRandomInteger(0, 120000));
         }
     },
+    dualCaptureTick: null,
+    mosDipTick: null,
+    oneWayTick: null,
     /**
      * Run the simulation with the given sessions.
      */
     runSimulation: async () => {
-        /* Normal call flows */
         let normalConfig = simulationModule.configuration.find((s => s.name === "normal"));
         if (!normalConfig) {
             console.error("No 'normal' configuration found. Simulation cannot run.");
@@ -124,7 +147,7 @@ const simulationModule = {
         }
         simulationModule.normalConfig = normalConfig;
         setTimeout(simulationModule.normalTick, simulationModule.getAdjustedDelay(simulationModule.normalConfig.cps_high));
-        /* Bad MOS calls */
+
         let badConfig = simulationModule.configuration.find((s => s.name === "bad"));
         if (!badConfig) {
             console.error("No 'bad' configuration found. Simulation cannot run.");
@@ -132,7 +155,7 @@ const simulationModule = {
         }
         simulationModule.badConfig = badConfig;
         setTimeout(simulationModule.badTick, (simulationModule.badConfig.interval * 1000) + utils.getRandomInteger(0, 600000));
-        /* Unauthorized calls */
+
         let unAuthorizedConfig = simulationModule.configuration.find((s => s.name === "403"));
         if (!unAuthorizedConfig) {
             console.error("No '403' configuration found. Simulation cannot run.");
@@ -140,22 +163,41 @@ const simulationModule = {
         }
         simulationModule.unAuthorizedConfig = unAuthorizedConfig;
         setTimeout(simulationModule.unAuthorizedTick, (simulationModule.unAuthorizedConfig.interval * 1000) + utils.getRandomInteger(0, 120000));
-        /* Simulation ticks to Session Module */
-        setInterval(simulationModule.tick, 200); // 200 ms tick for simulation updates
+
+        simulationModule.dualCaptureConfig = simulationModule.configuration.find((s => s.name === "dual_capture")) || null;
+        if (simulationModule.dualCaptureConfig) {
+            simulationModule.dualCaptureTick = simulationModule.makeIntervalTick(
+                () => simulationModule.dualCaptureConfig, "DualCapture", 120000);
+            setTimeout(simulationModule.dualCaptureTick,
+                (simulationModule.dualCaptureConfig.interval * 1000) + utils.getRandomInteger(0, 120000));
+        }
+
+        simulationModule.mosDipConfig = simulationModule.configuration.find((s => s.name === "mos_dip")) || null;
+        if (simulationModule.mosDipConfig) {
+            simulationModule.mosDipTick = simulationModule.makeIntervalTick(
+                () => simulationModule.mosDipConfig, "MosDip", 120000);
+            setTimeout(simulationModule.mosDipTick,
+                (simulationModule.mosDipConfig.interval * 1000) + utils.getRandomInteger(0, 120000));
+        }
+
+        simulationModule.oneWayConfig = simulationModule.configuration.find((s => s.name === "one_way")) || null;
+        if (simulationModule.oneWayConfig) {
+            simulationModule.oneWayTick = simulationModule.makeIntervalTick(
+                () => simulationModule.oneWayConfig, "OneWay", 120000);
+            setTimeout(simulationModule.oneWayTick,
+                (simulationModule.oneWayConfig.interval * 1000) + utils.getRandomInteger(0, 120000));
+        }
+
+        setInterval(simulationModule.tick, 200);
 
         console.log("▶️  Starting simulation at", new Date().toISOString());
     },
-    /**
-     * Tick function to update the simulation state.
-     *
-     */
     tick: async () => {
-        if (Date.now() - simulationModule.previous > 50) { //50 ms per tick default; 1000 for debug
+        if (Date.now() - simulationModule.previous > 50) {
             if (simulationModule.debug) console.log("🔄 Simulation tick at", new Date().toISOString());
             simulationModule.mediator.send({type: "tick"});
             simulationModule.previous = Date.now();
         } else {
-            // If the tick is too fast, we just return
             return;
         }
     },
