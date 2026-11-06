@@ -57,6 +57,14 @@ function mediaCorrelationId(rcinfo, callid) {
 }
 
 /**
+ * @param {string[]} bodyLines SDP lines without the final blank separator
+ * @returns {string}
+ */
+function joinSipBody(bodyLines) {
+    return bodyLines.join('') ;
+}
+
+/**
  * HepModule: Module for generating HEP payloads for SIP and RTP/RTCP reports
  */
 const hepModule = {
@@ -122,24 +130,26 @@ const hepModule = {
         inviteRaw.push('Content-Type: application/sdp\r\n')
         inviteRaw.push('Accept: application/sdp, application/dtmf-relay\r\n')
         inviteRaw.push('User-Agent: Grandstream GXP2200 1.0.3.27\r\n')
-        inviteRaw.push('Content-Length: 313\r\n')
+        const inviteSdp = joinSipBody([
+            'v=0\r\n',
+            'o=' + from + ' 8000 8000 IN IP4 ' + rcinfo.srcIp + '\r\n',
+            's=SIP Call\r\n',
+            'c=IN IP4 ' + rcinfo.srcIp + '\r\n',
+            't=0 0\r\n',
+            'm=audio ' + mediaInfo.srcPort + ' RTP/AVP 0 8 9 18 101\r\n',
+            'a=sendrecv\r\n',
+            'a=rtpmap:0 PCMU/8000\r\n',
+            'a=ptime:20\r\n',
+            'a=rtpmap:8 PCMA/8000\r\n',
+            'a=rtpmap:9 G722/8000\r\n',
+            'a=rtpmap:18 G729/8000\r\n',
+            'a=fmtp:18 annexb=no\r\n',
+            'a=rtpmap:101 telephone-event/8000\r\n',
+            'a=fmtp:101 0-15\r\n',
+        ]);
+        inviteRaw.push('Content-Length: ' + Buffer.byteLength(inviteSdp) + '\r\n')
         inviteRaw.push('\r\n')
-        inviteRaw.push('v=0\r\n')
-        inviteRaw.push('o=' + from + ' 8000 8000 IN IP4 ' + rcinfo.srcIp + '\r\n')
-        inviteRaw.push('s=SIP Call\r\n')
-        inviteRaw.push('c=IN IP4 ' + rcinfo.srcIp + '\r\n')
-        inviteRaw.push('t=0 0\r\n')
-        inviteRaw.push('m=audio ' + mediaInfo.srcPort + ' RTP/AVP 0 8 9 18 101\r\n')
-        inviteRaw.push('a=sendrecv\r\n')
-        inviteRaw.push('a=rtpmap:0 PCMU/8000\r\n')
-        inviteRaw.push('a=ptime:20\r\n')
-        inviteRaw.push('a=rtpmap:8 PCMA/8000\r\n')
-        inviteRaw.push('a=rtpmap:9 G722/8000\r\n')
-        inviteRaw.push('a=rtpmap:18 G729/8000\r\n')
-        inviteRaw.push('a=fmtp:18 annexb=no\r\n')
-        inviteRaw.push('a=rtpmap:101 telephone-event/8000\r\n')
-        inviteRaw.push('a=fmtp:101 0-15\r\n')
-        inviteRaw.push('\r\n\r\n')
+        inviteRaw.push(inviteSdp)
 
         // @ts-ignore
         return hepJs.encapsulate(inviteRaw.join(''), rcinfo)
@@ -253,24 +263,26 @@ const hepModule = {
         inviteRaw.push('Accept: application/sdp, application/dtmf-relay\r\n')
         inviteRaw.push('Proxy-Authorization: Digest username="' + from + '",realm="sip.botauro.com",nonce="' + utils.generateRandomString(32) + '",uri="sip:' + to + '@' + rcinfo.dstIp + ';transport=TCP",response="' + utils.generateRandomString(32) + '",cnonce="' + utils.generateRandomString(32) + '",nc=00000001,qop=auth,algorithm=MD5"\r\n')
         inviteRaw.push('User-Agent: Grandstream GXP2200 1.0.3.27\r\n')
-        inviteRaw.push('Content-Length: 313\r\n')
+        const inviteAuthSdp = joinSipBody([
+            'v=0\r\n',
+            'o=' + from + ' 8000 8000 IN IP4 ' + rcinfo.srcIp + '\r\n',
+            's=SIP Call\r\n',
+            'c=IN IP4 ' + rcinfo.srcIp + '\r\n',
+            't=0 0\r\n',
+            'm=audio ' + mediaInfo.srcPort + ' RTP/AVP 0 8 9 18 101\r\n',
+            'a=sendrecv\r\n',
+            'a=rtpmap:0 PCMU/8000\r\n',
+            'a=ptime:20\r\n',
+            'a=rtpmap:8 PCMA/8000\r\n',
+            'a=rtpmap:9 G722/8000\r\n',
+            'a=rtpmap:18 G729/8000\r\n',
+            'a=fmtp:18 annexb=no\r\n',
+            'a=rtpmap:101 telephone-event/8000\r\n',
+            'a=fmtp:101 0-15\r\n',
+        ]);
+        inviteRaw.push('Content-Length: ' + Buffer.byteLength(inviteAuthSdp) + '\r\n')
         inviteRaw.push('\r\n')
-        inviteRaw.push('v=0\r\n')
-        inviteRaw.push('o=' + from + ' 8000 8000 IN IP4 ' + rcinfo.srcIp + '\r\n')
-        inviteRaw.push('s=SIP Call\r\n')
-        inviteRaw.push('c=IN IP4 ' + rcinfo.srcIp + '\r\n')
-        inviteRaw.push('t=0 0\r\n')
-        inviteRaw.push('m=audio ' + mediaInfo.srcPort + ' RTP/AVP 0 8 9 18 101\r\n')
-        inviteRaw.push('a=sendrecv\r\n')
-        inviteRaw.push('a=rtpmap:0 PCMU/8000\r\n')
-        inviteRaw.push('a=ptime:20\r\n')
-        inviteRaw.push('a=rtpmap:8 PCMA/8000\r\n')
-        inviteRaw.push('a=rtpmap:9 G722/8000\r\n')
-        inviteRaw.push('a=rtpmap:18 G729/8000\r\n')
-        inviteRaw.push('a=fmtp:18 annexb=no\r\n')
-        inviteRaw.push('a=rtpmap:101 telephone-event/8000\r\n')
-        inviteRaw.push('a=fmtp:101 0-15\r\n')
-        inviteRaw.push('\r\n\r\n')
+        inviteRaw.push(inviteAuthSdp)
 
         // @ts-ignore
         return hepJs.encapsulate(inviteRaw.join(''), rcinfo)
@@ -406,24 +418,26 @@ const hepModule = {
         raw200OK.push('Supported: replaces\r\n')
         raw200OK.push('Contact: <sip:' + to + '@' + toHost + ':' + toPort + '>\r\n')
         raw200OK.push('Content-Type: application/sdp\r\n')
-        raw200OK.push('Content-Length: 311\r\n')
+        const okSdp = joinSipBody([
+            'v=0\r\n',
+            'o=root 11882 11882 IN IP4 ' + toHost + '\r\n',
+            's=session\r\n',
+            'c=IN IP4 ' + toHost + '\r\n',
+            't=0 0\r\n',
+            'm=audio ' + mediaInfo.dstPort + ' RTP/AVP 8 0 18 101\r\n',
+            'a=rtpmap:8 PCMA/8000\r\n',
+            'a=rtpmap:0 PCMU/8000\r\n',
+            'a=rtpmap:18 G729/8000\r\n',
+            'a=fmtp:18 annexb=no\r\n',
+            'a=rtpmap:101 telephone-event/8000\r\n',
+            'a=fmtp:101 0-16\r\n',
+            'a=silenceSupp:off - - - -\r\n',
+            'a=ptime:20\r\n',
+            'a=sendrecv\r\n',
+        ]);
+        raw200OK.push('Content-Length: ' + Buffer.byteLength(okSdp) + '\r\n')
         raw200OK.push('\r\n')
-        raw200OK.push('v=0\r\n')
-        raw200OK.push('o=root 11882 11882 IN IP4 ' + toHost + '\r\n')
-        raw200OK.push('s=session\r\n')
-        raw200OK.push('c=IN IP4 ' + toHost + '\r\n')
-        raw200OK.push('t=0 0\r\n')
-        raw200OK.push('m=audio ' + mediaInfo.dstPort + ' RTP/AVP 8 0 18 101\r\n')
-        raw200OK.push('a=rtpmap:8 PCMA/8000\r\n')
-        raw200OK.push('a=rtpmap:0 PCMU/8000\r\n')
-        raw200OK.push('a=rtpmap:18 G729/8000\r\n')
-        raw200OK.push('a=fmtp:18 annexb=no\r\n')
-        raw200OK.push('a=rtpmap:101 telephone-event/8000\r\n')
-        raw200OK.push('a=fmtp:101 0-16\r\n')
-        raw200OK.push('a=silenceSupp:off - - - -\r\n')
-        raw200OK.push('a=ptime:20\r\n')
-        raw200OK.push('a=sendrecv\r\n')
-        raw200OK.push('\r\n\r\n')
+        raw200OK.push(okSdp)
 
         // @ts-ignore
         return hepJs.encapsulate(raw200OK.join(''), rcinfo)
