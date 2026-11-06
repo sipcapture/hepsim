@@ -74,7 +74,7 @@ const hepModule = {
      * @param {string} capturePass - HEP Password for Capture Server
      * @param {number} payloadType - 1 SIP, 'JSON' for RTCP and RTP reports
      * @param {string} correlation_id - Call ID or first-leg callid for correlated legs
-     * @param {number} proto_type - 1 SIP, 34 RTP Hangup, 35 RTP Periodic/Short, 36 RTCP Hangup, 37 RTCP short, 100 Log
+     * @param {number} proto_type - 1 SIP; 34 MOS_RTP_FULL_REPORT (periodic/hangup via JSON TYPE); 35 RTP short; 36 RTCP full hangup; 37 RTCP short; 100 Log
      * @param {string} sourceIP
      * @param {string} destinationIP
      * @param {number} sourcePort
@@ -677,7 +677,7 @@ const hepModule = {
         rcinfoRaw.dstPort = dport
         rcinfoRaw.srcIp = src
         rcinfoRaw.dstIp = dst
-        rcinfoRaw.proto_type = 34
+        rcinfoRaw.proto_type = 36
         rcinfoRaw.correlation_id = correlation
         rcinfoRaw.mos = mediaInfo.mean_mos * 100
         rcinfoRaw = stampRcinfoTime(rcinfoRaw)
