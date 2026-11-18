@@ -30,8 +30,16 @@ function stampRcinfoTime(rcinfo) {
 
 /**
  * @typedef MEDIAINFO
- * @type { {mos: number, mean_mos: number, jitter: number, mean_jitter: number, packetloss: number, mean_rfactor: number, direction: number, srcPort: number, dstPort: number, tl_bytes: number, total_packets: number, max_jitter: number, min_mos: number, lastReport: number, global_packets: number, global_packetloss: number, rtpstart: number, rtpend: number, global_bytes: number, reportCount: number} }
+ * @type { {mos: number, mean_mos: number, jitter: number, mean_jitter: number, packetloss: number, mean_rfactor: number, direction: number, srcPort: number, dstPort: number, tl_bytes: number, total_packets: number, max_jitter: number, min_mos: number, lastReport: number, global_packets: number, global_packetloss: number, rtpstart: number, rtpend: number, global_bytes: number, reportCount: number, one_way_rtp?: number, connect_ts_ms?: number} }
  */
+
+/**
+ * @param {MEDIAINFO} mediaInfo
+ * @returns {number}
+ */
+function oneWayFlag(mediaInfo) {
+    return mediaInfo?.one_way_rtp ? 1 : 0;
+}
 
 /**
  * @param {DIALOG|undefined|null} dialog
@@ -84,7 +92,7 @@ const hepModule = {
      * @param {string} capturePass - HEP Password for Capture Server
      * @param {number} payloadType - 1 SIP, 'JSON' for RTCP and RTP reports
      * @param {string} correlation_id - Call ID or first-leg callid for correlated legs
-     * @param {number} proto_type - 1 SIP; 34 MOS_RTP_FULL_REPORT (periodic/hangup via JSON TYPE); 35 RTP short; 36 RTCP full hangup; 37 RTCP short; 100 Log
+     * @param {number} proto_type - 1 SIP; 34 MOS_RTP_FULL_REPORT (periodic/hangup via JSON TYPE); 35 RTP short; 36 RTCP full hangup; 37 RTCP short; 100 Log; 102 media alarm
      * @param {string} sourceIP
      * @param {string} destinationIP
      * @param {number} sourcePort
@@ -567,7 +575,7 @@ const hepModule = {
         rcinfoRaw = stampRcinfoTime(rcinfoRaw)
 
         // Shape matches hepagent RTPReport (PERIODIC).
-        let rawShortReport = `{"CORRELATION_ID":"${correlation}","RTP_SIP_CALL_ID":"${callid}","DELTA":${utils.getRandomFloat(0.001, 0.098)},"REPORT_TS":${new Date().getTime()*1000},"TL_BYTE":${mediaInfo.tl_bytes},"TOTAL_PK":${mediaInfo.total_packets},"EXPECTED_PK":${mediaInfo.total_packets + mediaInfo.packetloss},"PACKET_LOSS":${mediaInfo.packetloss},"SEQ":0,"MAX_JITTER":${mediaInfo.max_jitter},"MAX_DELTA":${utils.getRandomInteger(200, 2100)},"MAX_SKEW":0.172,"MEAN_JITTER":${mediaInfo.mean_jitter},"MIN_MOS":${mediaInfo.min_mos},"MEAN_MOS":${mediaInfo.mean_mos},"MOS":${mediaInfo.mos},"MAX_MOS":${mediaInfo.mos},"RFACTOR":80.200,"MIN_RFACTOR":80.200,"MEAN_RFACTOR":80.200,"SRC_IP":"${src}","SRC_PORT":${sport},"DST_IP":"${dst}","DST_PORT":${dport},"OUT_ORDER":0,"SSRC":"0xf1c6261","SSRC_CHG":0,"CODEC_PT":${DEMO_CODEC_PT},"CLOCK":${DEMO_CODEC_CLOCK},"CODEC_NAME":"${DEMO_CODEC_NAME}","CODEC_CHANNEL":${DEMO_CODEC_CHANNEL},"DIR":${dir},"ONE_WAY_RTP":0,"REPORT_NAME":"${src}-${sport}","PARTY":${dir},"STYPE":"${HEPAGENT_STYPE}","TYPE":"PERIODIC","REPORT_START":${mediaInfo.lastReport},"REPORT_END":${Math.floor(Date.now() / 1000)},"CN_PACKETS":0}`
+        let rawShortReport = `{"CORRELATION_ID":"${correlation}","RTP_SIP_CALL_ID":"${callid}","DELTA":${utils.getRandomFloat(0.001, 0.098)},"REPORT_TS":${new Date().getTime()*1000},"TL_BYTE":${mediaInfo.tl_bytes},"TOTAL_PK":${mediaInfo.total_packets},"EXPECTED_PK":${mediaInfo.total_packets + mediaInfo.packetloss},"PACKET_LOSS":${mediaInfo.packetloss},"SEQ":0,"MAX_JITTER":${mediaInfo.max_jitter},"MAX_DELTA":${utils.getRandomInteger(200, 2100)},"MAX_SKEW":0.172,"MEAN_JITTER":${mediaInfo.mean_jitter},"MIN_MOS":${mediaInfo.min_mos},"MEAN_MOS":${mediaInfo.mean_mos},"MOS":${mediaInfo.mos},"MAX_MOS":${mediaInfo.mos},"RFACTOR":80.200,"MIN_RFACTOR":80.200,"MEAN_RFACTOR":80.200,"SRC_IP":"${src}","SRC_PORT":${sport},"DST_IP":"${dst}","DST_PORT":${dport},"OUT_ORDER":0,"SSRC":"0xf1c6261","SSRC_CHG":0,"CODEC_PT":${DEMO_CODEC_PT},"CLOCK":${DEMO_CODEC_CLOCK},"CODEC_NAME":"${DEMO_CODEC_NAME}","CODEC_CHANNEL":${DEMO_CODEC_CHANNEL},"DIR":${dir},"ONE_WAY_RTP":${oneWayFlag(mediaInfo)},"REPORT_NAME":"${src}-${sport}","PARTY":${dir},"STYPE":"${HEPAGENT_STYPE}","TYPE":"PERIODIC","REPORT_START":${mediaInfo.lastReport},"REPORT_END":${Math.floor(Date.now() / 1000)},"CN_PACKETS":0}`
 
         // @ts-ignore
         return hepJs.encapsulate(rawShortReport, rcinfoRaw)
@@ -653,7 +661,7 @@ const hepModule = {
         rcinfoRaw.mos = mediaInfo.mean_mos * 100
         rcinfoRaw = stampRcinfoTime(rcinfoRaw)
         // Shape matches hepagent RTPReport (HANGUP).
-        let rawHangupReport = `{"CORRELATION_ID":"${correlation}","RTP_SIP_CALL_ID":"${callid}","DELTA":${utils.getRandomFloat(10.0,36.0)},"REPORT_TS":${new Date().getTime() * 1000},"TL_BYTE":${mediaInfo.tl_bytes},"TOTAL_PK":${mediaInfo.total_packets},"EXPECTED_PK":${mediaInfo.total_packets + mediaInfo.packetloss},"PACKET_LOSS":${mediaInfo.packetloss},"SEQ":0,"MAX_JITTER":${mediaInfo.max_jitter},"MAX_DELTA":${utils.getRandomInteger(30000, 50000)},"MAX_SKEW":26.510,"MEAN_JITTER":${mediaInfo.mean_jitter},"MIN_MOS":${mediaInfo.min_mos},"MEAN_MOS":${mediaInfo.mean_mos},"MOS":${mediaInfo.mos},"MAX_MOS":${mediaInfo.mos},"RFACTOR":${mediaInfo.mean_rfactor},"MIN_RFACTOR":93.200,"MEAN_RFACTOR":${mediaInfo.mean_rfactor},"SRC_IP":"${src}","SRC_PORT":${sport},"DST_IP":"${dst}","DST_PORT":${dport},"OUT_ORDER":0,"SSRC":"0x32fa14ff","SSRC_CHG":0,"CODEC_PT":${DEMO_CODEC_PT},"CLOCK":${DEMO_CODEC_CLOCK},"CODEC_NAME":"${DEMO_CODEC_NAME}","CODEC_CHANNEL":${DEMO_CODEC_CHANNEL},"DIR":${dir},"ONE_WAY_RTP":0,"REPORT_NAME":"${src}-${sport}","PARTY":${dir},"STYPE":"${HEPAGENT_STYPE}","TYPE":"HANGUP","REPORT_START":${mediaInfo.lastReport},"REPORT_END":${Math.floor(Date.now() / 1000)},"CN_PACKETS":0}`
+        let rawHangupReport = `{"CORRELATION_ID":"${correlation}","RTP_SIP_CALL_ID":"${callid}","DELTA":${utils.getRandomFloat(10.0,36.0)},"REPORT_TS":${new Date().getTime() * 1000},"TL_BYTE":${mediaInfo.tl_bytes},"TOTAL_PK":${mediaInfo.total_packets},"EXPECTED_PK":${mediaInfo.total_packets + mediaInfo.packetloss},"PACKET_LOSS":${mediaInfo.packetloss},"SEQ":0,"MAX_JITTER":${mediaInfo.max_jitter},"MAX_DELTA":${utils.getRandomInteger(30000, 50000)},"MAX_SKEW":26.510,"MEAN_JITTER":${mediaInfo.mean_jitter},"MIN_MOS":${mediaInfo.min_mos},"MEAN_MOS":${mediaInfo.mean_mos},"MOS":${mediaInfo.mos},"MAX_MOS":${mediaInfo.mos},"RFACTOR":${mediaInfo.mean_rfactor},"MIN_RFACTOR":93.200,"MEAN_RFACTOR":${mediaInfo.mean_rfactor},"SRC_IP":"${src}","SRC_PORT":${sport},"DST_IP":"${dst}","DST_PORT":${dport},"OUT_ORDER":0,"SSRC":"0x32fa14ff","SSRC_CHG":0,"CODEC_PT":${DEMO_CODEC_PT},"CLOCK":${DEMO_CODEC_CLOCK},"CODEC_NAME":"${DEMO_CODEC_NAME}","CODEC_CHANNEL":${DEMO_CODEC_CHANNEL},"DIR":${dir},"ONE_WAY_RTP":${oneWayFlag(mediaInfo)},"REPORT_NAME":"${src}-${sport}","PARTY":${dir},"STYPE":"${HEPAGENT_STYPE}","TYPE":"HANGUP","REPORT_START":${mediaInfo.lastReport},"REPORT_END":${Math.floor(Date.now() / 1000)},"CN_PACKETS":0}`
 
         return hepJs.encapsulate(rawHangupReport, rcinfoRaw)
     },
@@ -737,7 +745,7 @@ const hepModule = {
         rcinfoRaw.mos = mediaInfo.mean_mos * 100
         rcinfoRaw = stampRcinfoTime(rcinfoRaw)
         // Shape matches hepagent RTPShortReport (HANGUP); no STYPE on short reports.
-        let rawHangupReport = `{"CORRELATION_ID":"${correlation}","RTP_SIP_CALL_ID":"${callid}","PACKET_LOSS":${mediaInfo.global_packetloss},"TOTAL_PK":${mediaInfo.global_packets},"EXPECTED_PK":${mediaInfo.global_packets + mediaInfo.packetloss},"CODEC_PT":${DEMO_CODEC_PT},"CLOCK":${DEMO_CODEC_CLOCK},"CODEC_NAME":"${DEMO_CODEC_NAME}","CODEC_CHANNEL":${DEMO_CODEC_CHANNEL},"MEAN_JITTER":${mediaInfo.mean_jitter},"MOS":${mediaInfo.mean_mos},"RFACTOR":${mediaInfo.mean_rfactor},"DIR":${dir},"SSRC":"0x32fa14ff","REPORT_NAME":"${src}-${sport}","PARTY":${dir},"TYPE":"HANGUP","ONE_WAY_RTP":0,"CN_PACKETS":0}`
+        let rawHangupReport = `{"CORRELATION_ID":"${correlation}","RTP_SIP_CALL_ID":"${callid}","PACKET_LOSS":${mediaInfo.global_packetloss},"TOTAL_PK":${mediaInfo.global_packets},"EXPECTED_PK":${mediaInfo.global_packets + mediaInfo.packetloss},"CODEC_PT":${DEMO_CODEC_PT},"CLOCK":${DEMO_CODEC_CLOCK},"CODEC_NAME":"${DEMO_CODEC_NAME}","CODEC_CHANNEL":${DEMO_CODEC_CHANNEL},"MEAN_JITTER":${mediaInfo.mean_jitter},"MOS":${mediaInfo.mean_mos},"RFACTOR":${mediaInfo.mean_rfactor},"DIR":${dir},"SSRC":"0x32fa14ff","REPORT_NAME":"${src}-${sport}","PARTY":${dir},"TYPE":"HANGUP","ONE_WAY_RTP":${oneWayFlag(mediaInfo)},"CN_PACKETS":0}`
 
         return hepJs.encapsulate(rawHangupReport, rcinfoRaw)
     },
@@ -783,9 +791,90 @@ const hepModule = {
         const totalBytes = mediaInfo.global_bytes || mediaInfo.tl_bytes || 0;
         const totalPacketLoss = mediaInfo.global_packetloss || mediaInfo.packetloss || 0;
         const totalExpected = totalPackets + totalPacketLoss;
-        let rawFinalReport = `{"CORRELATION_ID":"${correlation}","RTP_SIP_CALL_ID":"${callid}","TOTAL_BYTES":${totalBytes},"TOTAL_PACKETS":${totalPackets},"TOTAL_EXPECTED_PK":${totalExpected},"TOTAL_PACKET_LOSS":${totalPacketLoss},"MIN_RFACTOR":93.200,"MEAN_RFACTOR":${mediaInfo.mean_rfactor},"MAX_RFACTOR":93.200,"MAX_SKEW":0,"MAX_DELTA":0,"MEAN_JITTER":${mediaInfo.mean_jitter},"MAX_JITTER":${mediaInfo.max_jitter},"MIN_MOS":${mediaInfo.min_mos},"MEAN_MOS":${mediaInfo.mean_mos},"ONE_WAY_RTP":0,"CODEC_CH":0,"CODEC_PT":${DEMO_CODEC_PT},"CLOCK":${DEMO_CODEC_CLOCK},"CODEC_NAME":"${DEMO_CODEC_NAME}","SSRC":"0x32fa14ff","CODEC_CHANNEL":${DEMO_CODEC_CHANNEL},"REPORT_NAME":"${src}-${sport}","DIR":${dir},"PARTY":${dir},"STYPE":"${HEPAGENT_STYPE}","TYPE":"FINAL","CN_PACKETS":0}`
+        let rawFinalReport = `{"CORRELATION_ID":"${correlation}","RTP_SIP_CALL_ID":"${callid}","TOTAL_BYTES":${totalBytes},"TOTAL_PACKETS":${totalPackets},"TOTAL_EXPECTED_PK":${totalExpected},"TOTAL_PACKET_LOSS":${totalPacketLoss},"MIN_RFACTOR":93.200,"MEAN_RFACTOR":${mediaInfo.mean_rfactor},"MAX_RFACTOR":93.200,"MAX_SKEW":0,"MAX_DELTA":0,"MEAN_JITTER":${mediaInfo.mean_jitter},"MAX_JITTER":${mediaInfo.max_jitter},"MIN_MOS":${mediaInfo.min_mos},"MEAN_MOS":${mediaInfo.mean_mos},"ONE_WAY_RTP":${oneWayFlag(mediaInfo)},"CODEC_CH":0,"CODEC_PT":${DEMO_CODEC_PT},"CLOCK":${DEMO_CODEC_CLOCK},"CODEC_NAME":"${DEMO_CODEC_NAME}","SSRC":"0x32fa14ff","CODEC_CHANNEL":${DEMO_CODEC_CHANNEL},"REPORT_NAME":"${src}-${sport}","DIR":${dir},"PARTY":${dir},"STYPE":"${HEPAGENT_STYPE}","TYPE":"FINAL","CN_PACKETS":0}`
 
         return hepJs.encapsulate(rawFinalReport, rcinfoRaw)
+    },
+    /**
+     * HEP proto 100 log: Chosen candidates from INVITE + 200 OK SDP.
+     * @param {string} callid
+     * @param {RCINFO} rcinfo
+     * @param {MEDIAINFO} mediaInfo
+     * @returns {Buffer}
+     */
+    // @ts-ignore
+    generateLog100: function (callid, rcinfo, mediaInfo) {
+        let rcinfoRaw = Object.assign({}, rcinfo);
+        const offerIp = rcinfo.srcIp;
+        const offerPort = mediaInfo.srcPort;
+        const answerIp = rcinfo.dstIp;
+        const answerPort = mediaInfo.dstPort;
+        const message = `Chosen candidates offer=${offerIp}:${offerPort} answer=${answerIp}:${answerPort}`;
+        rcinfoRaw.proto_type = 100;
+        rcinfoRaw.correlation_id = callid;
+        rcinfoRaw.srcPort = offerPort;
+        rcinfoRaw.dstPort = answerPort;
+        rcinfoRaw = stampRcinfoTime(rcinfoRaw);
+        const payload = JSON.stringify({
+            CORRELATION_ID: callid,
+            STYPE: 'HEPSIM-LOG',
+            TYPE: 'LOG',
+            MESSAGE: message,
+            SRC_IP: offerIp,
+            SRC_PORT: offerPort,
+            DST_IP: answerIp,
+            DST_PORT: answerPort,
+        });
+        // @ts-ignore
+        return hepJs.encapsulate(payload, rcinfoRaw);
+    },
+    /**
+     * HEP proto 102 media alarm HIT (hepagent UUPS-MEDIA shape).
+     * @param {string} callid
+     * @param {RCINFO} rcinfo
+     * @param {MEDIAINFO} mediaInfo
+     * @param {{detector: string, reason: string, layer?: string, oneWayRtp?: number, cnOnly?: number}} alarm
+     * @returns {Buffer}
+     */
+    // @ts-ignore
+    generateMediaAlarmHit: function (callid, rcinfo, mediaInfo, alarm) {
+        let rcinfoRaw = Object.assign({}, rcinfo);
+        const src = rcinfo.srcIp;
+        const dst = rcinfo.dstIp;
+        const sport = mediaInfo.srcPort;
+        const dport = mediaInfo.dstPort;
+        const reportTs = Date.now();
+        const connectTs = mediaInfo.connect_ts_ms || reportTs;
+        rcinfoRaw.proto_type = 102;
+        rcinfoRaw.correlation_id = callid;
+        rcinfoRaw.srcIp = src;
+        rcinfoRaw.dstIp = dst;
+        rcinfoRaw.srcPort = sport;
+        rcinfoRaw.dstPort = dport;
+        rcinfoRaw = stampRcinfoTime(rcinfoRaw);
+        const payload = JSON.stringify({
+            CORRELATION_ID: callid,
+            REPORT_TS: reportTs,
+            SRC_IP: src,
+            SRC_PORT: sport,
+            DST_IP: dst,
+            DST_PORT: dport,
+            CODEC_PT: DEMO_CODEC_PT,
+            CODEC_NAME: DEMO_CODEC_NAME,
+            PARTY: 1,
+            STYPE: 'UUPS-MEDIA',
+            TYPE: 'HIT',
+            DETECTOR: alarm.detector,
+            REASON: alarm.reason,
+            LAYER: alarm.layer || 'headers',
+            CYCLES: 0,
+            TONE_HZ: 0,
+            CONNECT_TS: connectTs,
+            ONE_WAY_RTP: alarm.oneWayRtp ? 1 : 0,
+            CN_ONLY: alarm.cnOnly ? 1 : 0,
+        });
+        // @ts-ignore
+        return hepJs.encapsulate(payload, rcinfoRaw);
     },
     /**
      * @param {number} seq
