@@ -7,7 +7,8 @@
         "min_duration": 160000,
         "mos_range": [4.2, 4.4],
         "jitter_range": [0.8, 1.2],
-        "packetloss_range": [0, 1]
+        "packetloss_range": [0, 1],
+        "sbc_telemetry": true
     },
     {
         "name": "bad",
@@ -18,13 +19,15 @@
         "min_duration": 160000,
         "mos_range": [2.8, 3.5],
         "jitter_range": [250, 450],
-        "packetloss_range": [150, 300]
+        "packetloss_range": [150, 300],
+        "sbc_telemetry": true
     },
     {
         "name": "403",
         "ips": ["186.30.1.125", "184.125.22.123", "156.152.10.1", "125.2.35.120"],
         "interval": 240,
-        "count": 50
+        "count": 50,
+        "sbc_telemetry": true
     },
     {
         "name": "dual_capture",
@@ -36,7 +39,8 @@
         "mos_range": [4.2, 4.4],
         "jitter_range": [0.8, 1.2],
         "packetloss_range": [0, 1],
-        "capture_ids": [14520, 14521]
+        "capture_ids": [14520, 14521],
+        "sbc_telemetry": true
     },
     {
         "name": "mos_dip",
@@ -49,7 +53,8 @@
         "mos_good": [4.2, 4.2],
         "mos_dip": [2.0, 2.0],
         "jitter_range": [0.8, 1.2],
-        "packetloss_range": [0, 1]
+        "packetloss_range": [0, 1],
+        "sbc_telemetry": true
     },
     {
         "name": "one_way",
@@ -60,6 +65,31 @@
         "min_duration": 160000,
         "mos_range": [4.2, 4.4],
         "jitter_range": [0.8, 1.2],
-        "packetloss_range": [0, 1]
+        "packetloss_range": [0, 1],
+        "sbc_telemetry": true
+    },
+    {
+        "name": "media_alarm_silence",
+        "ips": ["128.12.26.32"],
+        "interval": 240,
+        "count": 5,
+        "max_duration": 90000,
+        "min_duration": 60000,
+        "mos_range": [4.0, 4.2],
+        "jitter_range": [0.8, 1.2],
+        "packetloss_range": [0, 1],
+        "sbc_telemetry": true
+    },
+    {
+        "name": "media_alarm_short_call",
+        "ips": ["128.12.26.32"],
+        "interval": 180,
+        "count": 5,
+        "max_duration": 2500,
+        "min_duration": 800,
+        "mos_range": [4.2, 4.4],
+        "jitter_range": [0.8, 1.2],
+        "packetloss_range": [0, 1],
+        "sbc_telemetry": true
     }
 ]

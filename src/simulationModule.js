@@ -47,6 +47,10 @@ const simulationModule = {
     mosDipConfig: null,
     /** @type {SimulationConfig|null} */
     oneWayConfig: null,
+    /** @type {SimulationConfig|null} */
+    mediaAlarmSilenceConfig: null,
+    /** @type {SimulationConfig|null} */
+    mediaAlarmShortCallConfig: null,
     /**
      * @param {MediatorInterface} mediator
      * @param {{name: string}[]} configuration
@@ -136,6 +140,8 @@ const simulationModule = {
     dualCaptureTick: null,
     mosDipTick: null,
     oneWayTick: null,
+    mediaAlarmSilenceTick: null,
+    mediaAlarmShortCallTick: null,
     /**
      * Run the simulation with the given sessions.
      */
@@ -186,6 +192,22 @@ const simulationModule = {
                 () => simulationModule.oneWayConfig, "OneWay", 120000);
             setTimeout(simulationModule.oneWayTick,
                 (simulationModule.oneWayConfig.interval * 1000) + utils.getRandomInteger(0, 120000));
+        }
+
+        simulationModule.mediaAlarmSilenceConfig = simulationModule.configuration.find((s => s.name === "media_alarm_silence")) || null;
+        if (simulationModule.mediaAlarmSilenceConfig) {
+            simulationModule.mediaAlarmSilenceTick = simulationModule.makeIntervalTick(
+                () => simulationModule.mediaAlarmSilenceConfig, "MediaAlarmSilence", 120000);
+            setTimeout(simulationModule.mediaAlarmSilenceTick,
+                (simulationModule.mediaAlarmSilenceConfig.interval * 1000) + utils.getRandomInteger(0, 120000));
+        }
+
+        simulationModule.mediaAlarmShortCallConfig = simulationModule.configuration.find((s => s.name === "media_alarm_short_call")) || null;
+        if (simulationModule.mediaAlarmShortCallConfig) {
+            simulationModule.mediaAlarmShortCallTick = simulationModule.makeIntervalTick(
+                () => simulationModule.mediaAlarmShortCallConfig, "MediaAlarmShortCall", 120000);
+            setTimeout(simulationModule.mediaAlarmShortCallTick,
+                (simulationModule.mediaAlarmShortCallConfig.interval * 1000) + utils.getRandomInteger(0, 120000));
         }
 
         setInterval(simulationModule.tick, 200);
