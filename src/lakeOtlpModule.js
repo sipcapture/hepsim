@@ -1,4 +1,5 @@
 import { sampleHostMetrics } from './lakeMetrics.js';
+import { createBatcher } from './lakeBatch.js';
 
 const otlpUrl = process.env.LAKE_OTLP_URL || '';
 const timeoutMs = parseInt(process.env.LAKE_OTLP_TIMEOUT_MS || '3000', 10) || 3000;
@@ -46,6 +47,75 @@ const resourceAttrs = [
     attr('sbc.name', 'hepsim-sbc'),
 ];
 
+/**
+ * @typedef {{ name: string, asDouble: number, timeUnixNano: string, attributes: object[] }} MetricPoint
+ */
+
+/** @type {ReturnType<typeof createBatcher<object>> | null} */
+let logBatcher = null;
+/** @type {ReturnType<typeof createBatcher<MetricPoint>> | null} */
+let metricBatcher = null;
+
+function getLogBatcher() {
+    if (!logBatcher) {
+        logBatcher = createBatcher({
+            /**
+             * @param {object[]} records
+             */
+            flush: (records) => postJson('/v1/logs', {
+                resourceLogs: [{
+                    resource: { attributes: resourceAttrs },
+                    scopeLogs: [{
+                        scope: { name: 'hepsim' },
+                        logRecords: records,
+                    }],
+                }],
+            }),
+        });
+    }
+    return logBatcher;
+}
+
+function getMetricBatcher() {
+    if (!metricBatcher) {
+        metricBatcher = createBatcher({
+            /**
+             * @param {MetricPoint[]} points
+             */
+            flush: (points) => {
+                /** @type {Map<string, object[]>} */
+                const byName = new Map();
+                for (const p of points) {
+                    let list = byName.get(p.name);
+                    if (!list) {
+                        list = [];
+                        byName.set(p.name, list);
+                    }
+                    list.push({
+                        asDouble: p.asDouble,
+                        timeUnixNano: p.timeUnixNano,
+                        attributes: p.attributes,
+                    });
+                }
+                const metrics = [];
+                for (const [name, dataPoints] of byName) {
+                    metrics.push({ name, gauge: { dataPoints } });
+                }
+                return postJson('/v1/metrics', {
+                    resourceMetrics: [{
+                        resource: { attributes: resourceAttrs },
+                        scopeMetrics: [{
+                            scope: { name: 'hepsim' },
+                            metrics,
+                        }],
+                    }],
+                });
+            },
+        });
+    }
+    return metricBatcher;
+}
+
 const lakeOtlpModule = {
     enabled: () => !!otlpUrl,
 
@@ -65,19 +135,11 @@ const lakeOtlpModule = {
             attr('event', ev.event),
         ];
         if (ev.detector) attributes.push(attr('detector', ev.detector));
-        void postJson('/v1/logs', {
-            resourceLogs: [{
-                resource: { attributes: resourceAttrs },
-                scopeLogs: [{
-                    scope: { name: 'hepsim' },
-                    logRecords: [{
-                        timeUnixNano: nowNs,
-                        severityText: 'INFO',
-                        body: { stringValue: msg },
-                        attributes,
-                    }],
-                }],
-            }],
+        getLogBatcher().push({
+            timeUnixNano: nowNs,
+            severityText: 'INFO',
+            body: { stringValue: msg },
+            attributes,
         });
     },
 
@@ -88,8 +150,7 @@ const lakeOtlpModule = {
         if (!otlpUrl) return;
         const nowMs = ev.nowMs || Date.now();
         const nowNs = `${nowMs}000000`;
-        /** @type {object[]} */
-        const gaugePoints = [];
+        const batcher = getMetricBatcher();
         for (const ip of ev.ips) {
             const m = sampleHostMetrics(ip, nowMs);
             const dims = [
@@ -97,36 +158,19 @@ const lakeOtlpModule = {
                 attr('scenario', ev.scenario),
                 attr('host', 'hepsim-sbc'),
             ];
-            gaugePoints.push({
+            batcher.push({
                 name: 'cpu_pct',
-                gauge: {
-                    dataPoints: [{
-                        asDouble: m.cpu_pct,
-                        timeUnixNano: nowNs,
-                        attributes: dims,
-                    }],
-                },
+                asDouble: m.cpu_pct,
+                timeUnixNano: nowNs,
+                attributes: dims,
             });
-            gaugePoints.push({
+            batcher.push({
                 name: 'mem_gb',
-                gauge: {
-                    dataPoints: [{
-                        asDouble: m.mem_gb,
-                        timeUnixNano: nowNs,
-                        attributes: dims,
-                    }],
-                },
+                asDouble: m.mem_gb,
+                timeUnixNano: nowNs,
+                attributes: dims,
             });
         }
-        void postJson('/v1/metrics', {
-            resourceMetrics: [{
-                resource: { attributes: resourceAttrs },
-                scopeMetrics: [{
-                    scope: { name: 'hepsim' },
-                    metrics: gaugePoints,
-                }],
-            }],
-        });
     },
 };
 
