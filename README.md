@@ -33,10 +33,12 @@ HEP_ADDRESS=127.0.0.1 HEP_PORT=9060 bun index.js
 | `LAKE_INFLUX_TOKEN` | _(unset)_ | Optional `Authorization: Token …` |
 | `LAKE_OTLP_URL` | _(unset)_ | hepic-lake-ingest OTLP base (e.g. `http://127.0.0.1:4318`). Unset skips OTLP. |
 | `LAKE_OTLP_TIMEOUT_MS` | `3000` | OTLP HTTP timeout |
+| `LAKE_BATCH_SIZE` | `500` | Max items per lake HTTP POST (LP lines, OTLP log records, or OTLP metric data points); flush earlier on timer |
+| `LAKE_BATCH_MS` | `1000` | Max wait (ms) before flushing a non-empty lake batch; whichever of size or time hits first |
 | `DEBUG` | _(unset)_ | Enable debug session and logging |
 | `CONFIG_PATH` | `./config.json` | Config file path |
 
-Lake HTTP is emitted only when a scenario sets `"sbc_telemetry": true` **and** at least one of `LAKE_INFLUX_URL` / `LAKE_OTLP_URL` is set. Ingest needs `server.lineproto.enable` and/or OTLP enabled accordingly.
+Lake HTTP is emitted only when a scenario sets `"sbc_telemetry": true` **and** at least one of `LAKE_INFLUX_URL` / `LAKE_OTLP_URL` is set. Ingest needs `server.lineproto.enable` and/or OTLP enabled accordingly. Writes are batched (default 500 items or 1s, whichever first) into fewer POSTs; set `LAKE_BATCH_SIZE=1` to approximate per-event sends.
 
 ### Scenarios
 

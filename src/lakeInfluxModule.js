@@ -1,4 +1,5 @@
 import { sampleHostMetrics } from './lakeMetrics.js';
+import { createBatcher } from './lakeBatch.js';
 
 const influxUrl = process.env.LAKE_INFLUX_URL || '';
 const influxBucket = process.env.LAKE_INFLUX_BUCKET || 'default';
@@ -41,6 +42,21 @@ async function postLp(body) {
     }
 }
 
+/** @type {ReturnType<typeof createBatcher<string>> | null} */
+let lineBatcher = null;
+
+function getLineBatcher() {
+    if (!lineBatcher) {
+        lineBatcher = createBatcher({
+            /**
+             * @param {string[]} lines
+             */
+            flush: (lines) => postLp(lines.join('\n')),
+        });
+    }
+    return lineBatcher;
+}
+
 const lakeInfluxModule = {
     enabled: () => !!influxUrl,
 
@@ -62,7 +78,7 @@ const lakeInfluxModule = {
             `scenario=${escapeTag(ev.scenario)}`,
             `event=${escapeTag(ev.event)}`,
         ].join(',') + ` message="${escapeFieldString(msg)}" ${ns}`;
-        void postLp(line);
+        getLineBatcher().push(line);
     },
 
     /**
@@ -72,10 +88,10 @@ const lakeInfluxModule = {
         if (!influxUrl) return;
         const nowMs = ev.nowMs || Date.now();
         const ns = `${nowMs}000000`;
-        const lines = [];
+        const batcher = getLineBatcher();
         for (const ip of ev.ips) {
             const m = sampleHostMetrics(ip, nowMs);
-            lines.push(
+            batcher.push(
                 [
                     'sbc_metrics',
                     `host=${escapeTag('hepsim-sbc')}`,
@@ -85,7 +101,6 @@ const lakeInfluxModule = {
                 ].join(',') + ` cpu_pct=${m.cpu_pct},mem_gb=${m.mem_gb} ${ns}`
             );
         }
-        if (lines.length) void postLp(lines.join('\n'));
     },
 };
 
