@@ -1,7 +1,14 @@
 /**
  * Connection Manager Module: Handles the connection to the HEP receiver and manages sending data over UDP or TCP
- * @type {{receiver: string, port: number, transport: string, socket: Bun.Socket<undefined> | Bun.udp.ConnectedSocket<"buffer"> | WebSocket | null, debug: boolean, mediator: import('./simulationModule.js').MediatorInterface, queue: (Buffer|Uint8Array|string)[], paused: boolean, subscribed: boolean, connecting: boolean, sendData: function(Buffer|Uint8Array|string): void, errorHandler: function(Error): void, handleModuleMessage: function({type: string, data: any, config: {}}): void, establishConnection: function(import('./simulationModule.js').MediatorInterface): Promise<boolean>, send: function(Buffer|Uint8Array|string): Promise<void>, enqueue: function(Buffer|Uint8Array|string): void, pause: function(): void, unpause: function(): void, flushQueue: function(): void, trySend: function(Buffer|Uint8Array|string): boolean, reconnect: function(): void}}
+ * @type {{receiver: string, port: number, transport: string, socket: Bun.Socket<undefined> | Bun.udp.ConnectedSocket<"buffer"> | WebSocket | null, debug: boolean, mediator: import('./simulationModule.js').MediatorInterface, queue: (Buffer|Uint8Array|string)[], paused: boolean, subscribed: boolean, connecting: boolean, reconnectTimer: ReturnType<typeof setTimeout> | null, reconnectAttempt: number, reconnectBaseMs: number, sendData: function(Buffer|Uint8Array|string): void, errorHandler: function(Error): void, handleModuleMessage: function({type: string, data: any, config: {}}): void, establishConnection: function(import('./simulationModule.js').MediatorInterface): Promise<boolean>, send: function(Buffer|Uint8Array|string): Promise<void>, enqueue: function(Buffer|Uint8Array|string): void, pause: function(): void, unpause: function(): void, flushQueue: function(): void, trySend: function(Buffer|Uint8Array|string): boolean, reconnect: function(): void, clearReconnectTimer: function(): void, scheduleReconnect: function(string): void, onConnected: function(): void}}
  */
+const RECONNECT_MAX_MS = 30000;
+
+function parseReconnectBaseMs() {
+    const n = parseInt(process.env.HEP_RECONNECT_MS || '2000', 10);
+    return Number.isFinite(n) && n > 0 ? n : 2000;
+}
+
 const connectionManager = {
     receiver: process.env.HEP_ADDRESS || '127.0.0.1',
     port: parseInt(process.env.HEP_PORT) || 9060,
@@ -13,6 +20,10 @@ const connectionManager = {
     paused: false,
     subscribed: false,
     connecting: false,
+    /** @type {ReturnType<typeof setTimeout> | null} */
+    reconnectTimer: null,
+    reconnectAttempt: 0,
+    reconnectBaseMs: parseReconnectBaseMs(),
     /**
      * @type {import('./simulationModule.js').MediatorInterface}
      */
@@ -136,11 +147,53 @@ const connectionManager = {
         }
         connectionManager.trySend(data);
     },
+    clearReconnectTimer: () => {
+        if (connectionManager.reconnectTimer != null) {
+            clearTimeout(connectionManager.reconnectTimer);
+            connectionManager.reconnectTimer = null;
+        }
+    },
+    /**
+     * Delayed reconnect with exponential backoff while paused/queued after a failed connect.
+     * @param {string} reason
+     */
+    scheduleReconnect: (reason) => {
+        if (connectionManager.connecting) return;
+        if (connectionManager.reconnectTimer != null) return;
+        if (connectionManager.socket) return;
+        // Keep retrying while production is paused or HEP packets remain queued.
+        if (!connectionManager.paused && connectionManager.queue.length === 0) return;
+
+        connectionManager.reconnectAttempt += 1;
+        const exp = Math.min(
+            RECONNECT_MAX_MS,
+            connectionManager.reconnectBaseMs * Math.pow(2, connectionManager.reconnectAttempt - 1),
+        );
+        const delayMs = Math.max(connectionManager.reconnectBaseMs, exp);
+        console.log(
+            `HEP reconnect attempt ${connectionManager.reconnectAttempt} in ${delayMs}ms ` +
+            `(queue=${connectionManager.queue.length}, reason=${reason})`,
+        );
+        connectionManager.reconnectTimer = setTimeout(() => {
+            connectionManager.reconnectTimer = null;
+            connectionManager.establishConnection(connectionManager.mediator);
+        }, delayMs);
+    },
+    /**
+     * Reset retry state after a successful connect, then flush.
+     */
+    onConnected: () => {
+        connectionManager.clearReconnectTimer();
+        connectionManager.reconnectAttempt = 0;
+        connectionManager.connecting = false;
+        connectionManager.flushQueue();
+    },
     /**
      * Reconnect after close/error, guarded against stacked reconnects.
      */
     reconnect: () => {
         if (connectionManager.connecting) return;
+        if (connectionManager.reconnectTimer != null) return;
         if (connectionManager.debug) console.log('Scheduling reconnect...');
         connectionManager.establishConnection(connectionManager.mediator);
     },
@@ -167,6 +220,7 @@ const connectionManager = {
     establishConnection: async (mediator) => {
         if (connectionManager.connecting) return false;
         connectionManager.connecting = true;
+        connectionManager.clearReconnectTimer();
         connectionManager.mediator = mediator;
         if (!connectionManager.subscribed) {
             connectionManager.mediator.subscribe(connectionManager.handleModuleMessage);
@@ -187,8 +241,7 @@ const connectionManager = {
                     },
                 });
                 if (connectionManager.debug) console.log(`UDP socket connected to ${connectionManager.receiver}:${connectionManager.port}`);
-                connectionManager.connecting = false;
-                connectionManager.flushQueue();
+                connectionManager.onConnected();
                 return true;
             } else if (connectionManager.transport === 'tcp') {
                 connectionManager.socket = await Bun.connect({
@@ -221,6 +274,7 @@ const connectionManager = {
                             console.error('Connection error:', error);
                             connectionManager.connecting = false;
                             connectionManager.socket = null;
+                            connectionManager.scheduleReconnect('connectError');
                         },
                         end(socket) {
                             if (connectionManager.debug) console.log('Connection ended by server');
@@ -235,18 +289,19 @@ const connectionManager = {
                     },
                 });
                 if (connectionManager.debug) console.log(`Ready to send data over TCP.`);
-                connectionManager.connecting = false;
-                connectionManager.flushQueue();
+                connectionManager.onConnected();
                 return true;
             } else {
                 console.error('Unsupported transport protocol:', connectionManager.transport);
                 connectionManager.connecting = false;
+                connectionManager.scheduleReconnect('unsupported_transport');
                 return false;
             }
         } catch (error) {
             console.error('Failed to establish connection:', error);
             connectionManager.connecting = false;
             connectionManager.socket = null;
+            connectionManager.scheduleReconnect('establish_failed');
             return false;
         }
     },
@@ -261,6 +316,7 @@ const connectionManager = {
             } catch (error) {
                 console.error('Failed to establish connection:', error);
                 connectionManager.enqueue(data);
+                connectionManager.scheduleReconnect('send_establish_failed');
                 return;
             }
         }
