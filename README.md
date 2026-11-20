@@ -27,6 +27,7 @@ HEP_ADDRESS=127.0.0.1 HEP_PORT=9060 bun index.js
 | `HEP_ADDRESS` | `127.0.0.1` | HEP receiver address |
 | `HEP_PORT` | `9060` | HEP receiver port |
 | `HEP_TRANSPORT` | `udp` | Transport protocol (`udp` or `tcp`). Under backpressure, HEP packets are queued and session progress pauses until the socket drains. |
+| `HEP_RECONNECT_MS` | `2000` | Initial delay before retrying a failed HEP connect (exponential backoff, capped at 30s). Retries continue while paused or the send queue is non-empty so a brief receiver outage recovers without restarting hepsim. |
 | `MEDIA_HEP` | `true` | When `false`, skip sending media RTP/RTCP HEP reports (calculation and media timeouts still run) |
 | `LAKE_INFLUX_URL` | _(unset)_ | hepic-lake-ingest Influx write base (e.g. `http://127.0.0.1:8086`). Unset skips LP. |
 | `LAKE_INFLUX_BUCKET` | `default` | Influx `bucket` / db query param |
